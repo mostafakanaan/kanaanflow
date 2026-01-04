@@ -19,9 +19,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
-      - uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+          dotnet-quality: preview
 
       - name: Show .NET info
         run: dotnet --info
@@ -38,7 +39,6 @@ jobs:
             ! -name "*App*.csproj" \
             -print)
 
-          # Filter out any csproj that uses MAUI (UseMaui=true)
           non_maui=()
           for p in "${projects[@]}"; do
             if grep -q "<UseMaui>true</UseMaui>" "$p"; then
