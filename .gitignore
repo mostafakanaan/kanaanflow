@@ -61,7 +61,6 @@ platforms/*/obj/
 **/ios/obj/
 **/maccatalyst/bin/
 **/maccatalyst/obj/
-*.app
 *.dSYM
 
 # Windows
