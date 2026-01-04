@@ -1,23 +1,22 @@
 ﻿namespace KanaanFlow.App;
 
+using KanaanFlow.App.ViewModels;
+
 public partial class MainPage : ContentPage
 {
-	int count = 0;
+    public MainPage(MainPageViewModel viewModel)
+    {
+        InitializeComponent();
+        BindingContext = viewModel;
+    }
 
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
 
-	private void OnCounterClicked(object? sender, EventArgs e)
-	{
-		count++;
-
-		if (count == 1)
-			CounterBtn.Text = $"Clicked {count} time";
-		else
-			CounterBtn.Text = $"Clicked {count} times";
-
-		SemanticScreenReader.Announce(CounterBtn.Text);
-	}
+        if (BindingContext is MainPageViewModel vm)
+        {
+            await vm.RefreshAsync();
+        }
+    }
 }
