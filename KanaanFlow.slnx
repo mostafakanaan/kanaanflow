@@ -1,6 +1,9 @@
 <Solution>
-  <Project Path="KanaanFlow.App/KanaanFlow.App.csproj" />
+  <Project Path="KanaanFlow.App/KanaanFlow.App.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
   <Project Path="KanaanFlow.Core/KanaanFlow.Core.csproj" />
   <Project Path="KanaanFlow.Data/KanaanFlow.Data.csproj" />
   <Project Path="KanaanFlow.Sync/KanaanFlow.Sync.csproj" />
+  <Project Path="LicenseGenerator/LicenseGenerator.csproj" Id="33316135-6b46-495f-95f0-653cb0b5d621" />
 </Solution>

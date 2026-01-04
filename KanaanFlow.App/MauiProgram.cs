@@ -1,5 +1,8 @@
-﻿using KanaanFlow.App.ViewModels;
+﻿using KanaanFlow.App.Licensing;
+using KanaanFlow.App.Pages;
+using KanaanFlow.App.ViewModels;
 using KanaanFlow.Core.Abstractions;
+using KanaanFlow.Core.Licensing;
 using KanaanFlow.Data.Db;
 using KanaanFlow.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -20,17 +23,14 @@ public static class MauiProgram
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
 			});
 
+
 #if DEBUG
-		builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
+
 #endif
+
         string dbPath = Path.Combine(FileSystem.AppDataDirectory, "kanaanflow.db3");
         string connectionString = "Filename=" + dbPath;
-
-#if DEBUG
-        // write dbPath into console
-        Console.WriteLine("Database Path: " + dbPath);
-
-#endif
 
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
@@ -39,6 +39,10 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<DbInitializer>();
         builder.Services.AddScoped<INoteRepository, NoteRepository>();
+
+        builder.Services.AddSingleton<ILicenseService, LicenseService>();
+        builder.Services.AddTransient<LicensePage>();
+        builder.Services.AddTransient<WelcomePage>();
 
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageViewModel>();

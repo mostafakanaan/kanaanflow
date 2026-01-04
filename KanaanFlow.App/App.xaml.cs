@@ -1,18 +1,25 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using KanaanFlow.Core.Licensing;
 using KanaanFlow.Data.Db;
+using Microsoft.Maui.Controls;
 
 namespace KanaanFlow.App;
 
 public partial class App : Application
 {
-    public App(DbInitializer dbInitializer)
+    private readonly DbInitializer dbInitializer;
+    private readonly ILicenseService licenseService;
+
+    public App(DbInitializer dbInitializerInstance, ILicenseService licenseServiceInstance)
     {
         InitializeComponent();
 
-        _ = InitializeAsync(dbInitializer);
+        dbInitializer = dbInitializerInstance;
+        licenseService = licenseServiceInstance;
+
+        _ = InitializeAsync();
     }
 
-    private static async Task InitializeAsync(DbInitializer dbInitializer)
+    private async Task InitializeAsync()
     {
         try
         {
@@ -20,12 +27,30 @@ public partial class App : Application
         }
         catch
         {
-            // TODO: Add logging/UI toast
+            // TODO: log
         }
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new AppShell());
+        Shell shell = new AppShell();
+
+        Window window = new(shell);
+
+        _ = GateAsync();
+
+        return window;
+    }
+
+    private async Task GateAsync()
+    {
+        await Task.Delay(50);
+
+        LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
+
+        if (status.IsValid)
+            await Shell.Current.GoToAsync("//Welcome");
+        else
+            await Shell.Current.GoToAsync("//License");
     }
 }
