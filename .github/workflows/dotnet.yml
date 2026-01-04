@@ -79,33 +79,43 @@ jobs:
           echo "Installing MAUI workloads..."
           dotnet workload install maui-android
 
+          # Track all backup files for cleanup
+          backup_files=()
+          
+          # Set up trap for comprehensive cleanup
+          cleanup() {
+            for backup in "${backup_files[@]}"; do
+              if [ -f "$backup" ]; then
+                original="${backup%.backup}"
+                mv "$backup" "$original" 2>/dev/null || true
+              fi
+            done
+          }
+          trap cleanup EXIT ERR
+          
           for maui_proj in "${maui_projects[@]}"; do
             echo "==> Building MAUI project: $maui_proj"
             
             # Save original csproj
             cp "$maui_proj" "$maui_proj.backup"
-            
-            # Set up trap to ensure cleanup on failure
-            trap 'mv "$maui_proj.backup" "$maui_proj" 2>/dev/null || true' EXIT ERR
+            backup_files+=("$maui_proj.backup")
             
             # Modify to only target Android for CI build
             # Replace only the first occurrence of TargetFrameworks (non-conditional)
             sed -i '0,/<TargetFrameworks>.*<\/TargetFrameworks>/s|<TargetFrameworks>.*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' "$maui_proj"
-            # Remove the Windows-conditional TargetFrameworks line
-            sed -i '/<TargetFrameworks Condition=.*windows.*>/d' "$maui_proj"
+            # Remove the Windows-conditional TargetFrameworks line (case-insensitive)
+            sed -i '/<TargetFrameworks Condition=.*[Ww]indows.*>/d' "$maui_proj"
             
             # Build the MAUI project
             dotnet restore "$maui_proj"
             dotnet build "$maui_proj" -c Release --no-restore
             
-            # Restore original csproj
-            mv "$maui_proj.backup" "$maui_proj"
-            
-            # Clear trap since we've manually restored
-            trap - EXIT ERR
-            
             echo "MAUI project built successfully: $maui_proj"
           done
+          
+          # Restore all project files
+          cleanup
+          trap - EXIT ERR
 
       - name: Test (only test projects, non-MAUI)
         shell: bash
