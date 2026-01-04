@@ -85,8 +85,13 @@ jobs:
             # Save original csproj
             cp "$maui_proj" "$maui_proj.backup"
             
+            # Set up trap to ensure cleanup on failure
+            trap 'mv "$maui_proj.backup" "$maui_proj" 2>/dev/null || true' EXIT ERR
+            
             # Modify to only target Android for CI build
-            sed -i 's|<TargetFrameworks>.*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' "$maui_proj"
+            # Replace only the first occurrence of TargetFrameworks (non-conditional)
+            sed -i '0,/<TargetFrameworks>.*<\/TargetFrameworks>/s|<TargetFrameworks>.*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' "$maui_proj"
+            # Remove the Windows-conditional TargetFrameworks line
             sed -i '/<TargetFrameworks Condition=.*windows.*>/d' "$maui_proj"
             
             # Build the MAUI project
@@ -95,6 +100,9 @@ jobs:
             
             # Restore original csproj
             mv "$maui_proj.backup" "$maui_proj"
+            
+            # Clear trap since we've manually restored
+            trap - EXIT ERR
             
             echo "MAUI project built successfully: $maui_proj"
           done
