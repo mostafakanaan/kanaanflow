@@ -1,0 +1,26 @@
+Copyright (c) 2026 Mostafa Kanaan
+
+All rights reserved.
+
+This software is provided as source-available for personal use,
+learning, evaluation, and demonstration purposes only.
+
+You are permitted to:
+- View and study the source code
+- Run the software for personal or internal evaluation
+- Modify the source code for personal, non-commercial use
+
+You are NOT permitted to:
+- Use this software or derivative works for commercial purposes
+- Sell, sublicense, or distribute this software or derivative works
+- Offer this software as a hosted service or SaaS
+- Use this software in production environments without explicit permission
+
+Commercial use requires a separate written license from the author.
+
+Contributions:
+By submitting contributions to this repository, you agree that your
+contributions may be used, modified, and relicensed by the copyright
+holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
