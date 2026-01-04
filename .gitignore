@@ -1,0 +1,109 @@
+﻿# =========================
+# OS / Environment
+# =========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# User-specific files
+# =========================
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =========================
+# Visual Studio
+# =========================
+.vs/
+.vscode/
+.idea/
+
+# =========================
+# Build output
+# =========================
+bin/
+obj/
+out/
+
+# =========================
+# .NET / MSBuild
+# =========================
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+
+# =========================
+# NuGet
+# =========================
+packages/
+*.nupkg
+*.snupkg
+
+# =========================
+# MAUI / Xamarin
+# =========================
+platforms/*/bin/
+platforms/*/obj/
+
+# Android
+**/android/bin/
+**/android/obj/
+*.apk
+*.aab
+
+# iOS / macOS
+**/ios/bin/
+**/ios/obj/
+**/maccatalyst/bin/
+**/maccatalyst/obj/
+*.app
+*.dSYM
+
+# Windows
+**/windows/bin/
+**/windows/obj/
+
+# =========================
+# SQLite / Local data
+# =========================
+*.db
+*.db-shm
+*.db-wal
+
+# =========================
+# EF Core
+# =========================
+**/Migrations/*.Designer.cs
+**/Migrations/*.Snapshot.cs
+
+# =========================
+# Secrets / Config
+# =========================
+appsettings.json
+appsettings.Development.json
+*.env
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Backup / Export files
+# =========================
+*.bak
+*.zip
+*.pdf
+*.xlsx
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp

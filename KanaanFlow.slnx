@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="KanaanFlow.App/KanaanFlow.App.csproj" />
+  <Project Path="KanaanFlow.Core/KanaanFlow.Core.csproj" />
+  <Project Path="KanaanFlow.Data/KanaanFlow.Data.csproj" />
+  <Project Path="KanaanFlow.Sync/KanaanFlow.Sync.csproj" />
+</Solution>
