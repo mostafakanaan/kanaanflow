@@ -60,6 +60,45 @@ jobs:
             dotnet build "$p" -c Release --no-restore
           done
 
+      - name: Build MAUI project for Android
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Finding MAUI projects..."
+          mapfile -t maui_projects < <(find . -name "*.csproj" \
+            ! -path "*/bin/*" ! -path "*/obj/*" \
+            -exec grep -l "<UseMaui>true</UseMaui>" {} \;)
+
+          if [ ${#maui_projects[@]} -eq 0 ]; then
+            echo "No MAUI projects found. Skipping MAUI build."
+            exit 0
+          fi
+
+          # Install MAUI workloads
+          echo "Installing MAUI workloads..."
+          dotnet workload install maui-android
+
+          for maui_proj in "${maui_projects[@]}"; do
+            echo "==> Building MAUI project: $maui_proj"
+            
+            # Save original csproj
+            cp "$maui_proj" "$maui_proj.backup"
+            
+            # Modify to only target Android for CI build
+            sed -i 's|<TargetFrameworks>.*</TargetFrameworks>|<TargetFrameworks>net10.0-android</TargetFrameworks>|' "$maui_proj"
+            sed -i '/<TargetFrameworks Condition=.*windows.*>/d' "$maui_proj"
+            
+            # Build the MAUI project
+            dotnet restore "$maui_proj"
+            dotnet build "$maui_proj" -c Release --no-restore
+            
+            # Restore original csproj
+            mv "$maui_proj.backup" "$maui_proj"
+            
+            echo "MAUI project built successfully: $maui_proj"
+          done
+
       - name: Test (only test projects, non-MAUI)
         shell: bash
         run: |
