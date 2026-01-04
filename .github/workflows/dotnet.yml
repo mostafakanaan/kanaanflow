@@ -21,24 +21,77 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
+          dotnet-quality: preview
 
-      - name: Restore
-        run: dotnet restore
+      - name: Show .NET info
+        run: dotnet --info
 
-      # Build solution
-      - name: Build (non-MAUI projects)
+      - name: Build non-MAUI projects only
+        shell: bash
         run: |
-          dotnet build ./KanaanFlow.Core/KanaanFlow.Core.csproj -c Release
-          dotnet build ./KanaanFlow.Data/KanaanFlow.Data.csproj -c Release
-          dotnet build ./LicenseGenerator/LicenseGenerator.csproj -c Release
+          set -euo pipefail
 
-      - name: Test
-        run: dotnet test -c Release --verbosity normal
-        continue-on-error: true
+          echo "Finding non-MAUI projects..."
+          mapfile -t projects < <(find . -name "*.csproj" \
+            ! -path "*/bin/*" ! -path "*/obj/*" \
+            ! -path "*/KanaanFlow.App/*" \
+            ! -name "*App*.csproj" \
+            -print)
 
-      - name: Publish LicenseGenerator
-        run: dotnet publish ./LicenseGenerator/LicenseGenerator.csproj -c Release -o ./artifacts/LicenseGenerator
+          non_maui=()
+          for p in "${projects[@]}"; do
+            if grep -q "<UseMaui>true</UseMaui>" "$p"; then
+              echo "Skipping MAUI project: $p"
+            else
+              non_maui+=("$p")
+            fi
+          done
+
+          if [ ${#non_maui[@]} -eq 0 ]; then
+            echo "No non-MAUI projects found."
+            exit 1
+          fi
+
+          echo "Restoring/building:"
+          for p in "${non_maui[@]}"; do
+            echo "==> $p"
+            dotnet restore "$p"
+            dotnet build "$p" -c Release --no-restore
+          done
+
+      - name: Test (only test projects, non-MAUI)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t tests < <(find . -name "*Test*.csproj" \
+            ! -path "*/bin/*" ! -path "*/obj/*" -print)
+
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "No test projects found. Skipping tests."
+            exit 0
+          fi
+
+          for t in "${tests[@]}"; do
+            if grep -q "<UseMaui>true</UseMaui>" "$t"; then
+              echo "Skipping MAUI test project: $t"
+              continue
+            fi
+            echo "==> Testing $t"
+            dotnet test "$t" -c Release --verbosity normal
+          done
+
+      - name: Publish LicenseGenerator (if it exists)
+        shell: bash
+        run: |
+          set -euo pipefail
+          gen=$(find . -name "LicenseGenerator.csproj" -print | head -n 1 || true)
+          if [ -z "${gen}" ]; then
+            echo "No LicenseGenerator.csproj found. Skipping publish."
+            exit 0
+          fi
+          dotnet publish "$gen" -c Release -o ./artifacts/LicenseGenerator
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
