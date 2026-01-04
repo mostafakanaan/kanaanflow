@@ -113,9 +113,7 @@ jobs:
             echo "MAUI project built successfully: $maui_proj"
           done
           
-          # Restore all project files
-          cleanup
-          trap - EXIT ERR
+          # Cleanup will be automatically called by the EXIT trap
 
       - name: Test (only test projects, non-MAUI)
         shell: bash
