@@ -3,11 +3,335 @@
     x:Class="KanaanFlow.App.Pages.WelcomePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    Title="Welcome">
+    xmlns:viewmodels="clr-namespace:KanaanFlow.App.ViewModels"
+    x:DataType="viewmodels:DashboardViewModel"
+    Title="Dashboard"
+    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
 
-    <VerticalStackLayout Padding="16" Spacing="12">
-        <Label Text="Welcome" FontSize="28" FontAttributes="Bold" />
-        <Label x:Name="CustomerLabel" FontSize="18" />
-        <Label x:Name="ValidUntilLabel" FontSize="16" />
-    </VerticalStackLayout>
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="16">
+        
+        <!-- HEADER -->
+        <Frame Grid.Row="0"
+               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+               CornerRadius="16"
+               Padding="16"
+               BorderColor="Transparent"
+               HasShadow="True">
+            <Grid ColumnDefinitions="Auto,*">
+                <Frame CornerRadius="25" 
+                       HeightRequest="50" 
+                       WidthRequest="50" 
+                       Padding="0"
+                       BackgroundColor="{StaticResource Primary}"
+                       BorderColor="Transparent">
+                    <Label Text="K" 
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" />
+                </Frame>
+                <VerticalStackLayout Grid.Column="1" Padding="12,0" VerticalOptions="Center">
+                    <Label Text="Welcome back," 
+                           FontSize="13" 
+                           TextColor="{StaticResource Gray500}" />
+                    <Label x:Name="CustomerLabel" 
+                           FontSize="18" 
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Frame>
+
+        <!-- MENU GRID -->
+        <ScrollView Grid.Row="1">
+            <Grid ColumnDefinitions="*,*,*" 
+                  RowDefinitions="Auto,Auto" 
+                  ColumnSpacing="10" 
+                  RowSpacing="10">
+                
+                <!-- Reports -->
+                <Frame Grid.Row="0" Grid.Column="0"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToReportsCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="#667eea"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="R" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Reports" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Customers -->
+                <Frame Grid.Row="0" Grid.Column="1"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToCustomersCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="#17a2b8"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="C" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Customers" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Partners -->
+                <Frame Grid.Row="0" Grid.Column="2"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToPartnersCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="#fd7e14"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="P" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Partners" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Family -->
+                <Frame Grid.Row="1" Grid.Column="0"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToFamilyCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="#e83e8c"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="F" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Family" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Currency -->
+                <Frame Grid.Row="1" Grid.Column="1"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToCurrencyCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="#28a745"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="$" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Currency" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Notes -->
+                <Frame Grid.Row="1" Grid.Column="2"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                       CornerRadius="12"
+                       Padding="12"
+                       BorderColor="Transparent"
+                       HasShadow="True"
+                       HeightRequest="100">
+                    <Frame.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToNotesCommand}" />
+                    </Frame.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
+                        <Frame CornerRadius="10" 
+                               HeightRequest="40"
+                               WidthRequest="40"
+                               Padding="0"
+                               BackgroundColor="{StaticResource Primary}"
+                               BorderColor="Transparent"
+                               HorizontalOptions="Center">
+                            <Label Text="N" FontSize="18" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Frame>
+                        <Label Text="Notes" 
+                               FontSize="12" 
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    </VerticalStackLayout>
+                </Frame>
+            </Grid>
+        </ScrollView>
+
+        <!-- STATS FOOTER -->
+        <Frame Grid.Row="2"
+               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+               CornerRadius="16"
+               Padding="12"
+               BorderColor="Transparent"
+               HasShadow="True">
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                <!-- Customers Stat -->
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                    <Frame CornerRadius="8" 
+                           HeightRequest="32"
+                           WidthRequest="32"
+                           Padding="0"
+                           BackgroundColor="#E3F2FD"
+                           BorderColor="Transparent"
+                           HorizontalOptions="Center">
+                        <Label Text="C" FontSize="14" FontAttributes="Bold" TextColor="#1976D2"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Frame>
+                    <Label Text="156" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Label Text="Customers" 
+                           FontSize="9" 
+                           HorizontalOptions="Center"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+
+                <!-- Partners Stat -->
+                <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
+                    <Frame CornerRadius="8" 
+                           HeightRequest="32"
+                           WidthRequest="32"
+                           Padding="0"
+                           BackgroundColor="#FFF3E0"
+                           BorderColor="Transparent"
+                           HorizontalOptions="Center">
+                        <Label Text="P" FontSize="14" FontAttributes="Bold" TextColor="#E65100"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Frame>
+                    <Label Text="24" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Label Text="Partners" 
+                           FontSize="9" 
+                           HorizontalOptions="Center"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+
+                <!-- Family Stat -->
+                <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="2">
+                    <Frame CornerRadius="8" 
+                           HeightRequest="32"
+                           WidthRequest="32"
+                           Padding="0"
+                           BackgroundColor="#FCE4EC"
+                           BorderColor="Transparent"
+                           HorizontalOptions="Center">
+                        <Label Text="F" FontSize="14" FontAttributes="Bold" TextColor="#C2185B"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Frame>
+                    <Label Text="42" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Label Text="Family" 
+                           FontSize="9" 
+                           HorizontalOptions="Center"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+
+                <!-- Reports Stat -->
+                <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Spacing="2">
+                    <Frame CornerRadius="8" 
+                           HeightRequest="32"
+                           WidthRequest="32"
+                           Padding="0"
+                           BackgroundColor="#E8F5E9"
+                           BorderColor="Transparent"
+                           HorizontalOptions="Center">
+                        <Label Text="R" FontSize="14" FontAttributes="Bold" TextColor="#2E7D32"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Frame>
+                    <Label Text="12" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                    <Label Text="Reports" 
+                           FontSize="9" 
+                           HorizontalOptions="Center"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Frame>
+    </Grid>
 </ContentPage>

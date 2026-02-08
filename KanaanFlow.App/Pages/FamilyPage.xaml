@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="KanaanFlow.App.Pages.FamilyPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:KanaanFlow.App.ViewModels"
+    x:DataType="viewmodels:FamilyViewModel"
+    Title="Family Members"
+    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="16">
+        
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0">
+            <Label Text="Family Members" 
+                   FontSize="24" 
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Label Text="Manage family relationships and members" 
+                   FontSize="14" 
+                   TextColor="{StaticResource Gray500}" />
+        </VerticalStackLayout>
+
+        <!-- Search and Add -->
+        <Frame Grid.Row="1" 
+               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+               CornerRadius="12"
+               Padding="12"
+               BorderColor="Transparent"
+               HasShadow="True">
+            <Grid ColumnDefinitions="*,Auto">
+                <SearchBar Placeholder="Search family members..." 
+                           BackgroundColor="Transparent"
+                           Text="{Binding SearchText}" />
+                <Button Grid.Column="1" 
+                        Text="+ Add Member" 
+                        BackgroundColor="#e83e8c"
+                        TextColor="White"
+                        CornerRadius="8"
+                        Padding="16,8"
+                        Command="{Binding AddMemberCommand}" />
+            </Grid>
+        </Frame>
+
+        <!-- Family Members List -->
+        <CollectionView Grid.Row="2" 
+                        ItemsSource="{Binding FamilyMembers}"
+                        SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:FamilyMemberItem">
+                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                           CornerRadius="16"
+                           Padding="16"
+                           Margin="0,0,0,12"
+                           BorderColor="Transparent"
+                           HasShadow="True">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <!-- Avatar -->
+                            <Frame CornerRadius="30" 
+                                   HeightRequest="60" 
+                                   WidthRequest="60" 
+                                   Padding="0"
+                                   BackgroundColor="{Binding AvatarColor}"
+                                   BorderColor="Transparent">
+                                <Label Text="{Binding Initials}" 
+                                       FontSize="22"
+                                       FontAttributes="Bold"
+                                       TextColor="White"
+                                       HorizontalOptions="Center" 
+                                       VerticalOptions="Center" />
+                            </Frame>
+
+                            <!-- Info -->
+                            <VerticalStackLayout Grid.Column="1" Padding="16,0" VerticalOptions="Center" Spacing="4">
+                                <Label Text="{Binding Name}" 
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                <HorizontalStackLayout Spacing="8">
+                                    <Frame CornerRadius="4" 
+                                           Padding="6,2"
+                                           BackgroundColor="{Binding RelationshipColor}"
+                                           BorderColor="Transparent">
+                                        <Label Text="{Binding Relationship}" 
+                                               FontSize="10"
+                                               TextColor="White" />
+                                    </Frame>
+                                    <Label Text="{Binding Age, StringFormat='Age: {0}'}" 
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}"
+                                           VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                                <HorizontalStackLayout Spacing="16">
+                                    <Label Text="{Binding Phone}" 
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}" />
+                                    <Label Text="{Binding Email}" 
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+
+                            <!-- Actions -->
+                            <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" Spacing="8">
+                                <Button Text="Edit"
+                                        BackgroundColor="{StaticResource Secondary}"
+                                        TextColor="{StaticResource Primary}"
+                                        FontSize="12"
+                                        Padding="12,6"
+                                        CornerRadius="8"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FamilyViewModel}}, Path=EditMemberCommand}"
+                                        CommandParameter="{Binding}" />
+                                <Button Text="Call"
+                                        BackgroundColor="#E8F5E9"
+                                        TextColor="#2E7D32"
+                                        FontSize="12"
+                                        Padding="12,6"
+                                        CornerRadius="8"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:FamilyViewModel}}, Path=CallMemberCommand}"
+                                        CommandParameter="{Binding}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

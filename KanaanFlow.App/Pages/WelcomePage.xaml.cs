@@ -1,16 +1,27 @@
 ﻿namespace KanaanFlow.App.Pages;
 
+using KanaanFlow.App.ViewModels;
 using KanaanFlow.Core.Licensing;
 using System.Threading;
 
 public partial class WelcomePage : ContentPage
 {
     private readonly ILicenseService licenseService;
+    private readonly DashboardViewModel viewModel;
 
-    public WelcomePage(ILicenseService licenseServiceInstance)
+    public WelcomePage(ILicenseService licenseServiceInstance, DashboardViewModel dashboardViewModel)
     {
         InitializeComponent();
         licenseService = licenseServiceInstance;
+        viewModel = dashboardViewModel;
+        BindingContext = viewModel;
+
+        // Add toolbar item for license info
+        ToolbarItems.Add(new ToolbarItem
+        {
+            Text = "License",
+            Command = viewModel.ShowLicenseInfoCommand
+        });
     }
 
     protected override async void OnAppearing()
@@ -25,7 +36,9 @@ public partial class WelcomePage : ContentPage
             return;
         }
 
-        CustomerLabel.Text = "Customer: " + status.Claims.Customer;
-        ValidUntilLabel.Text = "Valid until (UTC): " + status.Claims.ValidUntilUtc.ToString("u");
+        CustomerLabel.Text = status.Claims.Customer;
+        
+        viewModel.CustomerName = status.Claims.Customer;
+        viewModel.ValidUntil = status.Claims.ValidUntilUtc.ToString("MMM dd, yyyy");
     }
 }

@@ -43,6 +43,23 @@ public static class MauiProgram
         builder.Services.AddSingleton<ILicenseService, LicenseService>();
         builder.Services.AddTransient<LicensePage>();
         builder.Services.AddTransient<WelcomePage>();
+        builder.Services.AddTransient<DashboardViewModel>();
+
+        // Customers
+        builder.Services.AddTransient<CustomersPage>();
+        builder.Services.AddTransient<CustomersViewModel>();
+
+        // Partners
+        builder.Services.AddTransient<PartnersPage>();
+        builder.Services.AddTransient<PartnersViewModel>();
+
+        // Reports
+        builder.Services.AddTransient<ReportsPage>();
+        builder.Services.AddTransient<ReportsViewModel>();
+
+        // Family
+        builder.Services.AddTransient<FamilyPage>();
+        builder.Services.AddTransient<FamilyViewModel>();
 
         builder.Services.AddTransient<MainPage>();
         builder.Services.AddTransient<MainPageViewModel>();

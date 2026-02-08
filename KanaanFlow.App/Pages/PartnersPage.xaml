@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="KanaanFlow.App.Pages.PartnersPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:KanaanFlow.App.ViewModels"
+    x:DataType="viewmodels:PartnersViewModel"
+    Title="Partners"
+    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="16">
+        
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0">
+            <Label Text="Partner Network" 
+                   FontSize="24" 
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+            <Label Text="Manage your business partnerships" 
+                   FontSize="14" 
+                   TextColor="{StaticResource Gray500}" />
+        </VerticalStackLayout>
+
+        <!-- Search Bar -->
+        <Frame Grid.Row="1" 
+               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+               CornerRadius="12"
+               Padding="12"
+               BorderColor="Transparent"
+               HasShadow="True">
+            <Grid ColumnDefinitions="*,Auto">
+                <SearchBar Placeholder="Search partners..." 
+                           BackgroundColor="Transparent"
+                           Text="{Binding SearchText}" />
+                <Button Grid.Column="1" 
+                        Text="+ Add Partner" 
+                        BackgroundColor="#fd7e14"
+                        TextColor="White"
+                        CornerRadius="8"
+                        Padding="16,8"
+                        Command="{Binding AddPartnerCommand}" />
+            </Grid>
+        </Frame>
+
+        <!-- Partners Grid -->
+        <CollectionView Grid.Row="2" 
+                        ItemsSource="{Binding Partners}"
+                        SelectionMode="None">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" 
+                                 Span="2" 
+                                 HorizontalItemSpacing="12" 
+                                 VerticalItemSpacing="12" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:PartnerItem">
+                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                           CornerRadius="16"
+                           Padding="16"
+                           BorderColor="Transparent"
+                           HasShadow="True">
+                        <VerticalStackLayout Spacing="12">
+                            <!-- Partner Avatar and Name -->
+                            <HorizontalStackLayout Spacing="12">
+                                <Frame CornerRadius="25" 
+                                       HeightRequest="50" 
+                                       WidthRequest="50" 
+                                       Padding="0"
+                                       BackgroundColor="{Binding AvatarColor}"
+                                       BorderColor="Transparent">
+                                    <Label Text="{Binding Initials}" 
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           HorizontalOptions="Center" 
+                                           VerticalOptions="Center" />
+                                </Frame>
+                                <VerticalStackLayout VerticalOptions="Center">
+                                    <Label Text="{Binding CompanyName}" 
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                    <Label Text="{Binding ContactPerson}" 
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}" />
+                                </VerticalStackLayout>
+                            </HorizontalStackLayout>
+
+                            <!-- Partner Details -->
+                            <BoxView HeightRequest="1" Color="{StaticResource Gray200}" />
+
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                                <Label Grid.Row="0" Grid.Column="0" Text="Type:" TextColor="{StaticResource Gray500}" FontSize="12" />
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding PartnerType}" FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                
+                                <Label Grid.Row="1" Grid.Column="0" Text="Since:" TextColor="{StaticResource Gray500}" FontSize="12" />
+                                <Label Grid.Row="1" Grid.Column="1" Text="{Binding PartnerSince}" FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                                
+                                <Label Grid.Row="2" Grid.Column="0" Text="Revenue:" TextColor="{StaticResource Gray500}" FontSize="12" />
+                                <Label Grid.Row="2" Grid.Column="1" Text="{Binding Revenue}" FontSize="12" FontAttributes="Bold"
+                                       TextColor="#28a745" />
+                            </Grid>
+
+                            <!-- Status Badge -->
+                            <Frame CornerRadius="8"
+                                   Padding="8,4"
+                                   BackgroundColor="{Binding StatusColor}"
+                                   BorderColor="Transparent"
+                                   HorizontalOptions="Start">
+                                <Label Text="{Binding Status}" 
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       TextColor="{Binding StatusTextColor}" />
+                            </Frame>
+                        </VerticalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

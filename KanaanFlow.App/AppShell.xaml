@@ -7,5 +7,9 @@
 
     <ShellContent Route="License" ContentTemplate="{DataTemplate pages:LicensePage}" />
     <ShellContent Route="Welcome" ContentTemplate="{DataTemplate pages:WelcomePage}" />
+    <ShellContent Route="Customers" ContentTemplate="{DataTemplate pages:CustomersPage}" />
+    <ShellContent Route="Partners" ContentTemplate="{DataTemplate pages:PartnersPage}" />
+    <ShellContent Route="Reports" ContentTemplate="{DataTemplate pages:ReportsPage}" />
+    <ShellContent Route="Family" ContentTemplate="{DataTemplate pages:FamilyPage}" />
 
 </Shell>
