@@ -8,144 +8,226 @@
     Title="Customers"
     BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
 
-    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="16">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20" RowSpacing="20">
         
-        <!-- Header -->
-        <VerticalStackLayout Grid.Row="0">
-            <Label Text="Customer Management" 
-                   FontSize="24" 
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-            <Label Text="Manage and view all your customers" 
-                   FontSize="14" 
-                   TextColor="{StaticResource Gray500}" />
-        </VerticalStackLayout>
+        <!-- Header with Gradient -->
+        <Border Grid.Row="0" StrokeThickness="0">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="16"/>
+            </Border.StrokeShape>
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#11998e" Offset="0.0" />
+                    <GradientStop Color="#38ef7d" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.Shadow>
+                <Shadow Brush="#11998e" Opacity="0.3" Radius="15" Offset="0,6" />
+            </Border.Shadow>
+            <VerticalStackLayout Padding="20,16">
+                <Label Text="Customer Management" 
+                       FontSize="24" 
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <Label Text="Manage and view all your customers" 
+                       FontSize="14" 
+                       TextColor="White"
+                       Opacity="0.9" />
+            </VerticalStackLayout>
+        </Border>
 
-        <!-- Search and Filter Bar -->
-        <Frame Grid.Row="1" 
-               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-               CornerRadius="12"
-               Padding="12"
-               BorderColor="Transparent"
-               HasShadow="True">
-            <Grid ColumnDefinitions="*,Auto">
-                <SearchBar Placeholder="Search customers..." 
-                           BackgroundColor="Transparent"
-                           Text="{Binding SearchText}"
-                           SearchCommand="{Binding SearchCommand}" />
-                <Button Grid.Column="1" 
-                        Text="+ Add" 
-                        BackgroundColor="{StaticResource Primary}"
-                        TextColor="White"
-                        CornerRadius="8"
-                        Padding="16,8"
-                        Command="{Binding AddCustomerCommand}" />
+        <!-- Search and Filter Bar with Glass Effect -->
+        <Border Grid.Row="1"
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}"
+                Opacity="0.95">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="14"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.08" Radius="12" Offset="0,4" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="*,Auto" Padding="12" ColumnSpacing="12">
+                <Border StrokeThickness="1"
+                        Stroke="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray600}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray800}}">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <SearchBar Placeholder="Search customers..." 
+                               BackgroundColor="Transparent"
+                               Text="{Binding SearchText}"
+                               SearchCommand="{Binding SearchCommand}" />
+                </Border>
+                <Border Grid.Column="1"
+                        StrokeThickness="0"
+                        HeightRequest="44">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#11998e" Offset="0.0" />
+                            <GradientStop Color="#38ef7d" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Button Text="+ Add" 
+                            TextColor="White"
+                            BackgroundColor="Transparent"
+                            FontAttributes="Bold"
+                            Command="{Binding AddCustomerCommand}" />
+                </Border>
             </Grid>
-        </Frame>
+        </Border>
 
-        <!-- Table Header -->
-        <Frame Grid.Row="2"
-               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-               CornerRadius="16"
-               Padding="0"
-               BorderColor="Transparent"
-               HasShadow="True">
+        <!-- Enhanced Table -->
+        <Border Grid.Row="2"
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="16"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.08" Radius="15" Offset="0,4" />
+            </Border.Shadow>
             <VerticalStackLayout>
-                <!-- Table Header Row -->
-                <Grid ColumnDefinitions="60,2*,2*,1.5*,1*,80" 
-                      Padding="16,12"
-                      BackgroundColor="{StaticResource Primary}">
-                    <Label Grid.Column="0" Text="ID" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                    <Label Grid.Column="1" Text="Name" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                    <Label Grid.Column="2" Text="Email" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                    <Label Grid.Column="3" Text="Phone" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                    <Label Grid.Column="4" Text="Status" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" />
-                    <Label Grid.Column="5" Text="Actions" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" HorizontalOptions="Center" />
-                </Grid>
+                <!-- Table Header with Gradient -->
+                <Border StrokeThickness="0" Padding="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16,16,0,0"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                            <GradientStop Color="#764ba2" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid ColumnDefinitions="60,2*,2*,1.5*,1*,80" Padding="20,14">
+                        <Label Grid.Column="0" Text="ID" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" FontSize="13" />
+                        <Label Grid.Column="1" Text="Name" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" FontSize="13" />
+                        <Label Grid.Column="2" Text="Email" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" FontSize="13" />
+                        <Label Grid.Column="3" Text="Phone" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" FontSize="13" />
+                        <Label Grid.Column="4" Text="Status" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" FontSize="13" />
+                        <Label Grid.Column="5" Text="Actions" FontAttributes="Bold" TextColor="White" VerticalOptions="Center" HorizontalOptions="Center" FontSize="13" />
+                    </Grid>
+                </Border>
 
-                <!-- Table Content -->
+                <!-- Table Content with Alternating Rows -->
                 <CollectionView ItemsSource="{Binding Customers}" 
                                 SelectionMode="None">
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="viewmodels:CustomerItem">
-                            <Grid ColumnDefinitions="60,2*,2*,1.5*,1*,80" 
-                                  Padding="16,14"
-                                  BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}">
-                                <Label Grid.Column="0" 
-                                       Text="{Binding Id}" 
-                                       TextColor="{StaticResource Gray500}"
-                                       VerticalOptions="Center" />
-                                
-                                <HorizontalStackLayout Grid.Column="1" Spacing="10" VerticalOptions="Center">
-                                    <Frame CornerRadius="20" 
-                                           HeightRequest="40" 
-                                           WidthRequest="40" 
-                                           Padding="0"
-                                           BackgroundColor="{Binding AvatarColor}"
-                                           BorderColor="Transparent">
-                                        <Label Text="{Binding Initials}" 
-                                               FontAttributes="Bold"
-                                               TextColor="White"
-                                               HorizontalOptions="Center" 
-                                               VerticalOptions="Center" />
-                                    </Frame>
-                                    <Label Text="{Binding Name}" 
-                                           FontAttributes="Bold"
-                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"
+                            <Border StrokeThickness="0,0,0,1"
+                                    Stroke="{AppThemeBinding Light=#F0F0F0, Dark={StaticResource Gray700}}"
+                                    BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}">
+                                <Grid ColumnDefinitions="60,2*,2*,1.5*,1*,80" Padding="20,16">
+                                    <Label Grid.Column="0" 
+                                           Text="{Binding Id}" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                           FontSize="13"
                                            VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                                
-                                <Label Grid.Column="2" 
-                                       Text="{Binding Email}" 
-                                       TextColor="{StaticResource Gray500}"
-                                       VerticalOptions="Center" />
-                                
-                                <Label Grid.Column="3" 
-                                       Text="{Binding Phone}" 
-                                       TextColor="{StaticResource Gray500}"
-                                       VerticalOptions="Center" />
-                                
-                                <Frame Grid.Column="4" 
-                                       CornerRadius="8"
-                                       Padding="8,4"
-                                       BackgroundColor="{Binding StatusColor}"
-                                       BorderColor="Transparent"
-                                       HorizontalOptions="Start"
-                                       VerticalOptions="Center">
-                                    <Label Text="{Binding Status}" 
-                                           FontSize="12"
-                                           TextColor="{Binding StatusTextColor}" />
-                                </Frame>
-                                
-                                <HorizontalStackLayout Grid.Column="5" 
-                                                       Spacing="8" 
-                                                       HorizontalOptions="Center"
-                                                       VerticalOptions="Center">
-                                    <Button Text="Edit" 
-                                            BackgroundColor="{StaticResource Secondary}"
-                                            TextColor="{StaticResource Primary}"
-                                            FontSize="12"
-                                            Padding="8,4"
-                                            CornerRadius="6"
-                                            HeightRequest="30"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CustomersViewModel}}, Path=EditCommand}"
-                                            CommandParameter="{Binding}" />
-                                </HorizontalStackLayout>
-                            </Grid>
-                            
+                                    
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="12" VerticalOptions="Center">
+                                        <Border StrokeThickness="0"
+                                                HeightRequest="42" 
+                                                WidthRequest="42">
+                                            <Border.StrokeShape>
+                                                <RoundRectangle CornerRadius="21"/>
+                                            </Border.StrokeShape>
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                                    <GradientStop Color="{Binding AvatarColor}" Offset="0.0" />
+                                                    <GradientStop Color="{Binding AvatarColor}" Offset="1.0" />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Label Text="{Binding Initials}" 
+                                                   FontAttributes="Bold"
+                                                   FontSize="14"
+                                                   TextColor="White"
+                                                   HorizontalOptions="Center" 
+                                                   VerticalOptions="Center" />
+                                        </Border>
+                                        <Label Text="{Binding Name}" 
+                                               FontAttributes="SemiBold"
+                                               FontSize="14"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}"
+                                               VerticalOptions="Center" />
+                                    </HorizontalStackLayout>
+                                    
+                                    <Label Grid.Column="2" 
+                                           Text="{Binding Email}" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                           FontSize="13"
+                                           VerticalOptions="Center" />
+                                    
+                                    <Label Grid.Column="3" 
+                                           Text="{Binding Phone}" 
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                                           FontSize="13"
+                                           VerticalOptions="Center" />
+                                    
+                                    <Border Grid.Column="4" 
+                                            StrokeThickness="0"
+                                            Padding="10,6"
+                                            BackgroundColor="{Binding StatusColor}"
+                                            HorizontalOptions="Start"
+                                            VerticalOptions="Center">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+                                        <Label Text="{Binding Status}" 
+                                               FontSize="11"
+                                               FontAttributes="Bold"
+                                               TextColor="{Binding StatusTextColor}" />
+                                    </Border>
+                                    
+                                    <Border Grid.Column="5"
+                                            StrokeThickness="0"
+                                            HorizontalOptions="Center"
+                                            VerticalOptions="Center"
+                                            Padding="14,6">
+                                        <Border.StrokeShape>
+                                            <RoundRectangle CornerRadius="8"/>
+                                        </Border.StrokeShape>
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="{StaticResource Secondary}" Offset="0.0" />
+                                                <GradientStop Color="#E8DEFF" Offset="1.0" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CustomersViewModel}}, Path=EditCommand}"
+                                                                  CommandParameter="{Binding}" />
+                                        </Border.GestureRecognizers>
+                                        <Label Text="Edit" 
+                                               TextColor="{StaticResource Primary}"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </Border>
+                                </Grid>
+                            </Border>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
                 
-                <!-- Summary Footer -->
-                <Grid ColumnDefinitions="*,Auto" 
-                      Padding="16,12"
-                      BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}">
+                <!-- Summary Footer with Gradient -->
+                <Border StrokeThickness="0" Padding="0">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="0,0,16,16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="{AppThemeBinding Light=#F8F9FA, Dark={StaticResource Gray800}}" Offset="0.0" />
+                            <GradientStop Color="{AppThemeBinding Light=#E9ECEF, Dark={StaticResource Gray700}}" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
                     <Label Text="{Binding TotalCustomersText}" 
-                           TextColor="{StaticResource Gray500}"
-                           VerticalOptions="Center" />
-                </Grid>
+                           Padding="20,12"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                           FontSize="13"
+                           FontAttributes="SemiBold" />
+                </Border>
             </VerticalStackLayout>
-        </Frame>
+        </Border>
     </Grid>
 </ContentPage>

@@ -8,330 +8,431 @@
     Title="Dashboard"
     BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
 
-    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="16">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20" RowSpacing="20">
         
-        <!-- HEADER -->
-        <Frame Grid.Row="0"
-               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-               CornerRadius="16"
-               Padding="16"
-               BorderColor="Transparent"
-               HasShadow="True">
-            <Grid ColumnDefinitions="Auto,*">
-                <Frame CornerRadius="25" 
-                       HeightRequest="50" 
-                       WidthRequest="50" 
-                       Padding="0"
-                       BackgroundColor="{StaticResource Primary}"
-                       BorderColor="Transparent">
+        <!-- HEADER with Gradient -->
+        <Border Grid.Row="0"
+                StrokeThickness="0"
+                Stroke="Transparent">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20"/>
+            </Border.StrokeShape>
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                    <GradientStop Color="#764BA2" Offset="1.0" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.Shadow>
+                <Shadow Brush="{StaticResource Primary}" 
+                        Opacity="0.3" 
+                        Radius="20" 
+                        Offset="0,8" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="Auto,*,Auto" Padding="20">
+                <Border StrokeThickness="3"
+                        Stroke="White"
+                        HeightRequest="60"
+                        WidthRequest="60"
+                        Opacity="0.9">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="30"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="White" Offset="0.0" />
+                            <GradientStop Color="#E8E8E8" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
                     <Label Text="K" 
-                           FontSize="22"
+                           FontSize="28"
                            FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Padding="16,0" VerticalOptions="Center">
+                    <Label Text="Welcome back," 
+                           FontSize="14" 
+                           TextColor="White"
+                           Opacity="0.8" />
+                    <Label x:Name="CustomerLabel" 
+                           FontSize="22" 
+                           FontAttributes="Bold"
+                           TextColor="White" />
+                </VerticalStackLayout>
+                <Border Grid.Column="2"
+                        StrokeThickness="2"
+                        Stroke="White"
+                        Opacity="0.6"
+                        HeightRequest="44"
+                        WidthRequest="44"
+                        VerticalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="22"/>
+                    </Border.StrokeShape>
+                    <Label Text="⚙" 
+                           FontSize="20"
                            TextColor="White"
                            HorizontalOptions="Center" 
                            VerticalOptions="Center" />
-                </Frame>
-                <VerticalStackLayout Grid.Column="1" Padding="12,0" VerticalOptions="Center">
-                    <Label Text="Welcome back," 
-                           FontSize="13" 
-                           TextColor="{StaticResource Gray500}" />
-                    <Label x:Name="CustomerLabel" 
-                           FontSize="18" 
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-                </VerticalStackLayout>
+                </Border>
             </Grid>
-        </Frame>
+        </Border>
 
-        <!-- MENU GRID -->
+        <!-- MENU GRID with Enhanced Styling -->
         <ScrollView Grid.Row="1">
             <Grid ColumnDefinitions="*,*,*" 
                   RowDefinitions="Auto,Auto" 
-                  ColumnSpacing="10" 
-                  RowSpacing="10">
+                  ColumnSpacing="16" 
+                  RowSpacing="16">
                 
                 <!-- Reports -->
-                <Frame Grid.Row="0" Grid.Column="0"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="0" Grid.Column="0"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#667eea" Offset="0.0" />
+                            <GradientStop Color="#764ba2" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#667eea" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToReportsCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="#667eea"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="R" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="📊" FontSize="24"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Reports" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
                 <!-- Customers -->
-                <Frame Grid.Row="0" Grid.Column="1"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="0" Grid.Column="1"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#11998e" Offset="0.0" />
+                            <GradientStop Color="#38ef7d" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#11998e" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToCustomersCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="#17a2b8"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="C" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="👥" FontSize="24"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Customers" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
                 <!-- Partners -->
-                <Frame Grid.Row="0" Grid.Column="2"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="0" Grid.Column="2"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#f2994a" Offset="0.0" />
+                            <GradientStop Color="#f2c94c" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#f2994a" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToPartnersCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="#fd7e14"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="P" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="🤝" FontSize="24"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Partners" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
                 <!-- Family -->
-                <Frame Grid.Row="1" Grid.Column="0"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="1" Grid.Column="0"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#eb3349" Offset="0.0" />
+                            <GradientStop Color="#f45c43" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#eb3349" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToFamilyCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="#e83e8c"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="F" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="👨‍👩‍👧‍👦" FontSize="20"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Family" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
                 <!-- Currency -->
-                <Frame Grid.Row="1" Grid.Column="1"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="1" Grid.Column="1"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#56ab2f" Offset="0.0" />
+                            <GradientStop Color="#a8e063" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#56ab2f" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToCurrencyCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="#28a745"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="$" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="💱" FontSize="24"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Currency" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
 
                 <!-- Notes -->
-                <Frame Grid.Row="1" Grid.Column="2"
-                       BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-                       CornerRadius="12"
-                       Padding="12"
-                       BorderColor="Transparent"
-                       HasShadow="True"
-                       HeightRequest="100">
-                    <Frame.GestureRecognizers>
+                <Border Grid.Row="1" Grid.Column="2"
+                        StrokeThickness="0"
+                        HeightRequest="120">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#4568DC" Offset="0.0" />
+                            <GradientStop Color="#B06AB3" Offset="1.0" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Shadow>
+                        <Shadow Brush="#4568DC" Opacity="0.4" Radius="15" Offset="0,8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding NavigateToNotesCommand}" />
-                    </Frame.GestureRecognizers>
-                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="6">
-                        <Frame CornerRadius="10" 
-                               HeightRequest="40"
-                               WidthRequest="40"
-                               Padding="0"
-                               BackgroundColor="{StaticResource Primary}"
-                               BorderColor="Transparent"
-                               HorizontalOptions="Center">
-                            <Label Text="N" FontSize="18" FontAttributes="Bold" TextColor="White"
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="8">
+                        <Border StrokeThickness="0"
+                                HeightRequest="48"
+                                WidthRequest="48"
+                                BackgroundColor="White"
+                                Opacity="0.95">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12"/>
+                            </Border.StrokeShape>
+                            <Label Text="📝" FontSize="24"
                                    HorizontalOptions="Center" VerticalOptions="Center" />
-                        </Frame>
+                        </Border>
                         <Label Text="Notes" 
-                               FontSize="12" 
+                               FontSize="14" 
                                FontAttributes="Bold"
-                               HorizontalOptions="Center"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                               TextColor="White" />
                     </VerticalStackLayout>
-                </Frame>
+                </Border>
             </Grid>
         </ScrollView>
 
-        <!-- STATS FOOTER -->
-        <Frame Grid.Row="2"
-               BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
-               CornerRadius="16"
-               Padding="12"
-               BorderColor="Transparent"
-               HasShadow="True">
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+        <!-- STATS FOOTER with Glass Effect -->
+        <Border Grid.Row="2"
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource OffBlack}}"
+                Opacity="0.95">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20"/>
+            </Border.StrokeShape>
+            <Border.Shadow>
+                <Shadow Brush="Black" Opacity="0.1" Radius="20" Offset="0,4" />
+            </Border.Shadow>
+            <Grid ColumnDefinitions="*,*,*,*" Padding="16,12" ColumnSpacing="12">
                 <!-- Customers Stat -->
-                <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
-                    <Frame CornerRadius="8" 
-                           HeightRequest="32"
-                           WidthRequest="32"
-                           Padding="0"
-                           BackgroundColor="#E3F2FD"
-                           BorderColor="Transparent"
-                           HorizontalOptions="Center">
-                        <Label Text="C" FontSize="14" FontAttributes="Bold" TextColor="#1976D2"
+                <VerticalStackLayout HorizontalOptions="Center" Spacing="4">
+                    <Border StrokeThickness="0"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"/>
+                        </Border.StrokeShape>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#E3F2FD" Offset="0.0" />
+                                <GradientStop Color="#BBDEFB" Offset="1.0" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Label Text="👥" FontSize="18"
                                HorizontalOptions="Center" VerticalOptions="Center" />
-                    </Frame>
+                    </Border>
                     <Label Text="156" 
-                           FontSize="16" 
+                           FontSize="18" 
                            FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                     <Label Text="Customers" 
-                           FontSize="9" 
-                           HorizontalOptions="Center"
+                           FontSize="10" 
                            TextColor="{StaticResource Gray500}" />
                 </VerticalStackLayout>
 
                 <!-- Partners Stat -->
-                <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
-                    <Frame CornerRadius="8" 
-                           HeightRequest="32"
-                           WidthRequest="32"
-                           Padding="0"
-                           BackgroundColor="#FFF3E0"
-                           BorderColor="Transparent"
-                           HorizontalOptions="Center">
-                        <Label Text="P" FontSize="14" FontAttributes="Bold" TextColor="#E65100"
+                <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="4">
+                    <Border StrokeThickness="0"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"/>
+                        </Border.StrokeShape>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FFF3E0" Offset="0.0" />
+                                <GradientStop Color="#FFE0B2" Offset="1.0" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Label Text="🤝" FontSize="18"
                                HorizontalOptions="Center" VerticalOptions="Center" />
-                    </Frame>
+                    </Border>
                     <Label Text="24" 
-                           FontSize="16" 
+                           FontSize="18" 
                            FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                     <Label Text="Partners" 
-                           FontSize="9" 
-                           HorizontalOptions="Center"
+                           FontSize="10" 
                            TextColor="{StaticResource Gray500}" />
                 </VerticalStackLayout>
 
                 <!-- Family Stat -->
-                <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="2">
-                    <Frame CornerRadius="8" 
-                           HeightRequest="32"
-                           WidthRequest="32"
-                           Padding="0"
-                           BackgroundColor="#FCE4EC"
-                           BorderColor="Transparent"
-                           HorizontalOptions="Center">
-                        <Label Text="F" FontSize="14" FontAttributes="Bold" TextColor="#C2185B"
+                <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center" Spacing="4">
+                    <Border StrokeThickness="0"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"/>
+                        </Border.StrokeShape>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FCE4EC" Offset="0.0" />
+                                <GradientStop Color="#F8BBD0" Offset="1.0" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Label Text="👨‍👩‍👧‍👦" FontSize="16"
                                HorizontalOptions="Center" VerticalOptions="Center" />
-                    </Frame>
+                    </Border>
                     <Label Text="42" 
-                           FontSize="16" 
+                           FontSize="18" 
                            FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                     <Label Text="Family" 
-                           FontSize="9" 
-                           HorizontalOptions="Center"
+                           FontSize="10" 
                            TextColor="{StaticResource Gray500}" />
                 </VerticalStackLayout>
 
                 <!-- Reports Stat -->
-                <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Spacing="2">
-                    <Frame CornerRadius="8" 
-                           HeightRequest="32"
-                           WidthRequest="32"
-                           Padding="0"
-                           BackgroundColor="#E8F5E9"
-                           BorderColor="Transparent"
-                           HorizontalOptions="Center">
-                        <Label Text="R" FontSize="14" FontAttributes="Bold" TextColor="#2E7D32"
+                <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center" Spacing="4">
+                    <Border StrokeThickness="0"
+                            HeightRequest="40"
+                            WidthRequest="40">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10"/>
+                        </Border.StrokeShape>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#E8F5E9" Offset="0.0" />
+                                <GradientStop Color="#C8E6C9" Offset="1.0" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Label Text="📊" FontSize="18"
                                HorizontalOptions="Center" VerticalOptions="Center" />
-                    </Frame>
+                    </Border>
                     <Label Text="12" 
-                           FontSize="16" 
+                           FontSize="18" 
                            FontAttributes="Bold"
-                           HorizontalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}" />
                     <Label Text="Reports" 
-                           FontSize="9" 
-                           HorizontalOptions="Center"
+                           FontSize="10" 
                            TextColor="{StaticResource Gray500}" />
                 </VerticalStackLayout>
             </Grid>
-        </Frame>
+        </Border>
     </Grid>
 </ContentPage>
