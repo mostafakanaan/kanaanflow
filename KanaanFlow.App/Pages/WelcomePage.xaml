@@ -29,7 +29,7 @@
                         Radius="20" 
                         Offset="0,8" />
             </Border.Shadow>
-            <Grid ColumnDefinitions="Auto,*,Auto" Padding="20">
+            <Grid ColumnDefinitions="Auto,*" Padding="20">
                 <Border StrokeThickness="3"
                         Stroke="White"
                         HeightRequest="60"
@@ -61,22 +61,6 @@
                            FontAttributes="Bold"
                            TextColor="White" />
                 </VerticalStackLayout>
-                <Border Grid.Column="2"
-                        StrokeThickness="2"
-                        Stroke="White"
-                        Opacity="0.6"
-                        HeightRequest="44"
-                        WidthRequest="44"
-                        VerticalOptions="Center">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="22"/>
-                    </Border.StrokeShape>
-                    <Label Text="⚙" 
-                           FontSize="20"
-                           TextColor="White"
-                           HorizontalOptions="Center" 
-                           VerticalOptions="Center" />
-                </Border>
             </Grid>
         </Border>
 

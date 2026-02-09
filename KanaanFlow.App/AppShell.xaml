@@ -3,13 +3,101 @@
     x:Class="KanaanFlow.App.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:pages="clr-namespace:KanaanFlow.App.Pages">
+    xmlns:pages="clr-namespace:KanaanFlow.App.Pages"
+    FlyoutBehavior="Flyout"
+    FlyoutBackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource Gray900}}">
 
-    <ShellContent Route="License" ContentTemplate="{DataTemplate pages:LicensePage}" />
-    <ShellContent Route="Welcome" ContentTemplate="{DataTemplate pages:WelcomePage}" />
-    <ShellContent Route="Customers" ContentTemplate="{DataTemplate pages:CustomersPage}" />
-    <ShellContent Route="Partners" ContentTemplate="{DataTemplate pages:PartnersPage}" />
-    <ShellContent Route="Reports" ContentTemplate="{DataTemplate pages:ReportsPage}" />
-    <ShellContent Route="Family" ContentTemplate="{DataTemplate pages:FamilyPage}" />
+    <Shell.FlyoutHeaderBehavior>
+        <FlyoutHeaderBehavior>CollapseOnScroll</FlyoutHeaderBehavior>
+    </Shell.FlyoutHeaderBehavior>
+
+    <!-- Flyout Header -->
+    <Shell.FlyoutHeader>
+        <Grid HeightRequest="150" BackgroundColor="{StaticResource Primary}">
+            <Grid.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="{StaticResource Primary}" Offset="0.0" />
+                    <GradientStop Color="#764BA2" Offset="1.0" />
+                </LinearGradientBrush>
+            </Grid.Background>
+            <VerticalStackLayout VerticalOptions="Center" Padding="20">
+                <Border StrokeThickness="3"
+                        Stroke="White"
+                        HeightRequest="60"
+                        WidthRequest="60"
+                        HorizontalOptions="Start">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="30"/>
+                    </Border.StrokeShape>
+                    <Border.Background>
+                        <SolidColorBrush Color="White"/>
+                    </Border.Background>
+                    <Label Text="K" 
+                           FontSize="28"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalOptions="Center" 
+                           VerticalOptions="Center" />
+                </Border>
+                <Label Text="KanaanFlow" 
+                       FontSize="22" 
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       Margin="0,10,0,0" />
+                <Label Text="Business Management" 
+                       FontSize="12" 
+                       TextColor="White"
+                       Opacity="0.8" />
+            </VerticalStackLayout>
+        </Grid>
+    </Shell.FlyoutHeader>
+
+    <!-- Flyout Item Styles -->
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Grid ColumnDefinitions="Auto,*" Padding="20,12" ColumnSpacing="16">
+                <Image Source="{Binding FlyoutIcon}"
+                       HeightRequest="24"
+                       WidthRequest="24"
+                       VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       Text="{Binding Title}"
+                       FontSize="16"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark=White}"
+                       VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
+    <!-- License Page (Hidden from flyout) -->
+    <ShellContent Route="License" 
+                  ContentTemplate="{DataTemplate pages:LicensePage}"
+                  FlyoutItemIsVisible="False" />
+
+    <!-- Main Navigation -->
+    <FlyoutItem Title="Dashboard" Icon="home.png">
+        <ShellContent Route="Welcome" 
+                      ContentTemplate="{DataTemplate pages:WelcomePage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Customers" Icon="customers.png">
+        <ShellContent Route="Customers" 
+                      ContentTemplate="{DataTemplate pages:CustomersPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Partners" Icon="partners.png">
+        <ShellContent Route="Partners" 
+                      ContentTemplate="{DataTemplate pages:PartnersPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Reports" Icon="reports.png">
+        <ShellContent Route="Reports" 
+                      ContentTemplate="{DataTemplate pages:ReportsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Family" Icon="family.png">
+        <ShellContent Route="Family" 
+                      ContentTemplate="{DataTemplate pages:FamilyPage}" />
+    </FlyoutItem>
 
 </Shell>

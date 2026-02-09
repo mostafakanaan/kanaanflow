@@ -8,6 +8,10 @@
     Title="Customers"
     BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}">
 
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior IsVisible="True" />
+    </Shell.BackButtonBehavior>
+
     <Grid RowDefinitions="Auto,Auto,*" Padding="20" RowSpacing="20">
         
         <!-- Header with Gradient -->
