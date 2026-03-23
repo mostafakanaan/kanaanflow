@@ -41,7 +41,9 @@ public static class MauiProgram
         builder.Services.AddScoped<INoteRepository, NoteRepository>();
 
         builder.Services.AddSingleton<ILicenseService, LicenseService>();
+        builder.Services.AddTransient<LicensePageViewModel>();
         builder.Services.AddTransient<LicensePage>();
+        builder.Services.AddTransient<WelcomePageViewModel>();
         builder.Services.AddTransient<WelcomePage>();
 
         builder.Services.AddTransient<MainPage>();

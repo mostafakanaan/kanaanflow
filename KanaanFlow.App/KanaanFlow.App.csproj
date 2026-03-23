@@ -22,7 +22,7 @@
 		<ApplicationTitle>KanaanFlow.App</ApplicationTitle>
 
 		<!-- App Identifier -->
-		<ApplicationId>com.companyname.kanaanflow.app</ApplicationId>
+		<ApplicationId>com.kanaanflow.app</ApplicationId>
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>

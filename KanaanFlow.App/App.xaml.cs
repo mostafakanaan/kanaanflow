@@ -1,5 +1,6 @@
 ﻿using KanaanFlow.Core.Licensing;
 using KanaanFlow.Data.Db;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
 
 namespace KanaanFlow.App;
@@ -8,13 +9,15 @@ public partial class App : Application
 {
     private readonly DbInitializer dbInitializer;
     private readonly ILicenseService licenseService;
+    private readonly ILogger<App> logger;
 
-    public App(DbInitializer dbInitializerInstance, ILicenseService licenseServiceInstance)
+    public App(DbInitializer dbInitializerInstance, ILicenseService licenseServiceInstance, ILogger<App> loggerInstance)
     {
         InitializeComponent();
 
         dbInitializer = dbInitializerInstance;
         licenseService = licenseServiceInstance;
+        logger = loggerInstance;
 
         _ = InitializeAsync();
     }
@@ -24,10 +27,11 @@ public partial class App : Application
         try
         {
             await dbInitializer.InitializeAsync(CancellationToken.None);
+            logger.LogInformation("Database initialized successfully.");
         }
-        catch
+        catch (Exception ex)
         {
-            // TODO: log
+            logger.LogError(ex, "Database initialization failed.");
         }
     }
 
@@ -49,7 +53,7 @@ public partial class App : Application
         LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
 
         if (status.IsValid)
-            await Shell.Current.GoToAsync("//Welcome");
+            await Shell.Current.GoToAsync("//Main");
         else
             await Shell.Current.GoToAsync("//License");
     }

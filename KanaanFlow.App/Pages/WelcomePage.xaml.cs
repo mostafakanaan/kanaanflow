@@ -1,31 +1,27 @@
-﻿namespace KanaanFlow.App.Pages;
+namespace KanaanFlow.App.Pages;
 
-using KanaanFlow.Core.Licensing;
-using System.Threading;
+using KanaanFlow.App.ViewModels;
 
 public partial class WelcomePage : ContentPage
 {
-    private readonly ILicenseService licenseService;
+    private readonly WelcomePageViewModel viewModel;
 
-    public WelcomePage(ILicenseService licenseServiceInstance)
+    public WelcomePage(WelcomePageViewModel viewModelInstance)
     {
         InitializeComponent();
-        licenseService = licenseServiceInstance;
+        viewModel = viewModelInstance;
+        BindingContext = viewModel;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
 
-        LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
+        await viewModel.LoadAsync();
 
-        if (!status.IsValid || status.Claims == null)
+        if (viewModel.ShouldRedirectToLicense)
         {
             await Shell.Current.GoToAsync("//License");
-            return;
         }
-
-        CustomerLabel.Text = "Customer: " + status.Claims.Customer;
-        ValidUntilLabel.Text = "Valid until (UTC): " + status.Claims.ValidUntilUtc.ToString("u");
     }
 }

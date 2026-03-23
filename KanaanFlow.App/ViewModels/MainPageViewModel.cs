@@ -38,7 +38,7 @@ public sealed class MainPageViewModel
 
     private async Task AddSampleAsync()
     {
-        Note note = new()
+        Note note = new Note
         {
             Id = Guid.NewGuid(),
             Title = "Hello from Core @ " + DateTime.UtcNow.ToString("u"),

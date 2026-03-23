@@ -1,36 +1,20 @@
-﻿namespace KanaanFlow.App.Pages;
+namespace KanaanFlow.App.Pages;
 
-using KanaanFlow.Core.Licensing;
+using KanaanFlow.App.ViewModels;
 using System;
-using System.Threading;
 
 public partial class LicensePage : ContentPage
 {
-    private readonly ILicenseService licenseService;
-
-    public LicensePage(ILicenseService licenseServiceInstance)
+    public LicensePage(LicensePageViewModel viewModel)
     {
         InitializeComponent();
-        licenseService = licenseServiceInstance;
+        BindingContext = viewModel;
+
+        viewModel.LicenseValidated += OnLicenseValidated;
     }
 
-    private async void OnSaveClicked(object sender, EventArgs e)
+    private async void OnLicenseValidated(object? sender, EventArgs e)
     {
-        try
-        {
-            await licenseService.SaveLicenseKeyAsync(KeyEditor.Text ?? string.Empty, CancellationToken.None);
-
-            LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
-            StatusLabel.Text = status.Message;
-
-            if (status.IsValid)
-            {
-                await Shell.Current.GoToAsync("//Welcome");
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusLabel.Text = "Failed: " + ex.Message;
-        }
+        await Shell.Current.GoToAsync("//Main");
     }
 }
