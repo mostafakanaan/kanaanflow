@@ -55,6 +55,12 @@ public sealed partial class TransactionListViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    public async Task AddTransactionAsync()
+    {
+        await Shell.Current.GoToAsync("AddTransaction");
+    }
+
+    [RelayCommand]
     public async Task DeleteAsync(Transaction transaction)
     {
         if (transaction == null)

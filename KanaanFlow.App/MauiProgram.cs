@@ -42,7 +42,6 @@ public static class MauiProgram
         builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
         builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
         builder.Services.AddScoped<ILoanRepository, LoanRepository>();
-        builder.Services.AddScoped<IReceivableRepository, ReceivableRepository>();
 
         // Services
         builder.Services.AddScoped<IReportService, ReportService>();

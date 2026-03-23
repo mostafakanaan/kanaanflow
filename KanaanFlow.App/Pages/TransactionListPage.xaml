@@ -4,7 +4,7 @@
              x:Class="KanaanFlow.App.Pages.TransactionListPage"
              Title="{Binding Title}">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*,Auto">
 
         <VerticalStackLayout Grid.Row="0" Padding="16,16,16,8" Spacing="8">
             <Label Text="Filter by Date" FontSize="14" TextColor="#888" />
@@ -51,6 +51,13 @@
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
+
+        <Button Grid.Row="2"
+                Text="+ Add Transaction"
+                Command="{Binding AddTransactionCommand}"
+                BackgroundColor="#1565C0"
+                TextColor="White"
+                Margin="16" />
 
     </Grid>
 

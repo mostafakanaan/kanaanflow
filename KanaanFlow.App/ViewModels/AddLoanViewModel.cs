@@ -16,7 +16,8 @@ public sealed partial class AddLoanViewModel : BaseViewModel
     private string contactName = string.Empty;
     private decimal amount;
     private PaymentDirection direction = PaymentDirection.Given;
-    private DateTime? dueDate;
+    private bool hasDueDate;
+    private DateTime dueDateValue = DateTime.Today;
     private string statusMessage = string.Empty;
 
     public string ContactName
@@ -37,10 +38,16 @@ public sealed partial class AddLoanViewModel : BaseViewModel
         set => SetProperty(ref direction, value);
     }
 
-    public DateTime? DueDate
+    public bool HasDueDate
     {
-        get => dueDate;
-        set => SetProperty(ref dueDate, value);
+        get => hasDueDate;
+        set => SetProperty(ref hasDueDate, value);
+    }
+
+    public DateTime DueDateValue
+    {
+        get => dueDateValue;
+        set => SetProperty(ref dueDateValue, value);
     }
 
     public string StatusMessage
@@ -84,14 +91,12 @@ public sealed partial class AddLoanViewModel : BaseViewModel
             RemainingAmount = Amount,
             Direction = Direction,
             Status = LoanStatus.Active,
-            DueDate = DueDate,
+            DueDate = HasDueDate ? DueDateValue : null,
             CreatedUtc = DateTime.UtcNow
         };
 
         await loanRepository.AddAsync(loan, CancellationToken.None);
-        StatusMessage = "Loan saved!";
-        ContactName = string.Empty;
-        Amount = 0;
-        DueDate = null;
+
+        await Shell.Current.GoToAsync("..");
     }
 }

@@ -16,18 +16,15 @@
         </Tab>
         <Tab Title="Transactions" Icon="dotnet_bot.png">
             <ShellContent Route="Transactions" ContentTemplate="{DataTemplate pages:TransactionListPage}" />
-            <ShellContent Route="AddTransaction" ContentTemplate="{DataTemplate pages:AddTransactionPage}" Shell.TabBarIsVisible="False" />
         </Tab>
         <Tab Title="Loans" Icon="dotnet_bot.png">
             <ShellContent Route="Loans" ContentTemplate="{DataTemplate pages:LoanListPage}" />
-            <ShellContent Route="AddLoan" ContentTemplate="{DataTemplate pages:AddLoanPage}" Shell.TabBarIsVisible="False" />
         </Tab>
         <Tab Title="Reports" Icon="dotnet_bot.png">
             <ShellContent Route="Reports" ContentTemplate="{DataTemplate pages:ReportsPage}" />
         </Tab>
         <Tab Title="Settings" Icon="dotnet_bot.png">
             <ShellContent Route="Settings" ContentTemplate="{DataTemplate pages:SettingsPage}" />
-            <ShellContent Route="Categories" ContentTemplate="{DataTemplate pages:CategoryListPage}" Shell.TabBarIsVisible="False" />
         </Tab>
     </TabBar>
 

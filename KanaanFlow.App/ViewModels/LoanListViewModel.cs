@@ -56,4 +56,9 @@ public sealed partial class LoanListViewModel : BaseViewModel
             IsBusy = false;
         }
     }
+    [RelayCommand]
+    public async Task AddLoanAsync()
+    {
+        await Shell.Current.GoToAsync("AddLoan");
+    }
 }

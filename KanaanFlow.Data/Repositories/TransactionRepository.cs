@@ -66,4 +66,14 @@ public sealed class TransactionRepository : ITransactionRepository
             .ToListAsync(cancellationToken);
         return items;
     }
+
+    public async Task<IReadOnlyList<Transaction>> GetRecentAsync(int count, CancellationToken cancellationToken)
+    {
+        List<Transaction> items = await db.Transactions
+            .Include(x => x.Category)
+            .OrderByDescending(x => x.Date)
+            .Take(count)
+            .ToListAsync(cancellationToken);
+        return items;
+    }
 }

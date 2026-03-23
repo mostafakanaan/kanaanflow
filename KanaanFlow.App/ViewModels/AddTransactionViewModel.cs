@@ -115,10 +115,7 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
         };
 
         await transactionRepository.AddAsync(tx, CancellationToken.None);
-        StatusMessage = "Transaction saved!";
 
-        Description = string.Empty;
-        Amount = 0;
-        Date = DateTime.Today;
+        await Shell.Current.GoToAsync("..");
     }
 }

@@ -3,26 +3,30 @@ namespace KanaanFlow.Data.Db;
 using KanaanFlow.Core.Enums;
 using KanaanFlow.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 public sealed class DbInitializer
 {
-    private readonly AppDbContext db;
+    private readonly IServiceScopeFactory scopeFactory;
 
-    public DbInitializer(AppDbContext dbContext)
+    public DbInitializer(IServiceScopeFactory serviceScopeFactory)
     {
-        db = dbContext;
+        scopeFactory = serviceScopeFactory;
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
+        using IServiceScope scope = scopeFactory.CreateScope();
+        AppDbContext db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
         await db.Database.EnsureCreatedAsync(cancellationToken);
-        await SeedCategoriesAsync(cancellationToken);
+        await SeedCategoriesAsync(db, cancellationToken);
     }
 
-    private async Task SeedCategoriesAsync(CancellationToken cancellationToken)
+    private static async Task SeedCategoriesAsync(AppDbContext db, CancellationToken cancellationToken)
     {
         bool hasCategories = await db.Categories.AnyAsync(cancellationToken);
         if (hasCategories)

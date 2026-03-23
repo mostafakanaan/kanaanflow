@@ -14,4 +14,5 @@ public interface ITransactionRepository
     Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken);
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
     Task<IReadOnlyList<Transaction>> GetByDateRangeAsync(DateTime from, DateTime to, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Transaction>> GetRecentAsync(int count, CancellationToken cancellationToken);
 }

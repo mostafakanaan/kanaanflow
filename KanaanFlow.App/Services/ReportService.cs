@@ -39,12 +39,24 @@ public sealed class ReportService : IReportService
 
     public async Task<IReadOnlyList<DailyReport>> GenerateWeeklySummaryAsync(DateTime weekStart, CancellationToken cancellationToken)
     {
+        DateTime from = weekStart.Date;
+        DateTime to = from.AddDays(7);
+
+        IReadOnlyList<Transaction> transactions = await transactionRepository.GetByDateRangeAsync(from, to, cancellationToken);
+
         List<DailyReport> reports = new List<DailyReport>();
         for (int i = 0; i < 7; i++)
         {
-            DateTime day = weekStart.AddDays(i);
-            DailyReport report = await GenerateDailySummaryAsync(day, cancellationToken);
-            reports.Add(report);
+            DateTime day = from.AddDays(i).Date;
+            IEnumerable<Transaction> dayTx = transactions.Where(x => x.Date >= day && x.Date < day.AddDays(1));
+
+            reports.Add(new DailyReport
+            {
+                Date = day,
+                TotalIncome = dayTx.Where(x => x.Type == TransactionType.Income).Sum(x => x.Amount),
+                TotalExpense = dayTx.Where(x => x.Type == TransactionType.Expense).Sum(x => x.Amount),
+                TransactionCount = dayTx.Count()
+            });
         }
         return reports;
     }
@@ -52,12 +64,24 @@ public sealed class ReportService : IReportService
     public async Task<IReadOnlyList<DailyReport>> GenerateMonthlySummaryAsync(int year, int month, CancellationToken cancellationToken)
     {
         int daysInMonth = DateTime.DaysInMonth(year, month);
+        DateTime from = new DateTime(year, month, 1);
+        DateTime to = from.AddMonths(1);
+
+        IReadOnlyList<Transaction> transactions = await transactionRepository.GetByDateRangeAsync(from, to, cancellationToken);
+
         List<DailyReport> reports = new List<DailyReport>();
         for (int day = 1; day <= daysInMonth; day++)
         {
             DateTime date = new DateTime(year, month, day);
-            DailyReport report = await GenerateDailySummaryAsync(date, cancellationToken);
-            reports.Add(report);
+            IEnumerable<Transaction> dayTx = transactions.Where(x => x.Date >= date && x.Date < date.AddDays(1));
+
+            reports.Add(new DailyReport
+            {
+                Date = date,
+                TotalIncome = dayTx.Where(x => x.Type == TransactionType.Income).Sum(x => x.Amount),
+                TotalExpense = dayTx.Where(x => x.Type == TransactionType.Expense).Sum(x => x.Amount),
+                TransactionCount = dayTx.Count()
+            });
         }
         return reports;
     }

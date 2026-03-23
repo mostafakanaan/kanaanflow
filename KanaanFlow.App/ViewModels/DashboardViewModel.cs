@@ -53,7 +53,7 @@ public sealed partial class DashboardViewModel : BaseViewModel
             DateTime tomorrow = today.AddDays(1);
 
             IReadOnlyList<Transaction> todayTx = await transactionRepository.GetByDateRangeAsync(today, tomorrow, CancellationToken.None);
-            IReadOnlyList<Transaction> allTx = await transactionRepository.GetAllAsync(CancellationToken.None);
+            IReadOnlyList<Transaction> recentTx = await transactionRepository.GetRecentAsync(5, CancellationToken.None);
 
             TodayIncome = todayTx
                 .Where(x => x.Type == Core.Enums.TransactionType.Income)
@@ -66,7 +66,7 @@ public sealed partial class DashboardViewModel : BaseViewModel
             Balance = TodayIncome - TodayExpense;
 
             RecentTransactions.Clear();
-            foreach (Transaction tx in allTx.Take(5))
+            foreach (Transaction tx in recentTx)
             {
                 RecentTransactions.Add(tx);
             }

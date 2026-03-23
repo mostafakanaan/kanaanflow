@@ -13,7 +13,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<Transaction> Transactions { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
     public DbSet<Loan> Loans { get; set; } = null!;
-    public DbSet<Receivable> Receivables { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,14 +51,5 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.CreatedUtc).IsRequired();
         });
 
-        modelBuilder.Entity<Receivable>(entity =>
-        {
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.ContactName).IsRequired().HasMaxLength(200);
-            entity.Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
-            entity.Property(x => x.RemainingAmount).IsRequired().HasColumnType("decimal(18,2)");
-            entity.Property(x => x.Status).IsRequired();
-            entity.Property(x => x.CreatedUtc).IsRequired();
-        });
-    }
+        }
 }

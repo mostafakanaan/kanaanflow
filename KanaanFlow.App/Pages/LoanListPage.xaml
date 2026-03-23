@@ -4,12 +4,13 @@
              x:Class="KanaanFlow.App.Pages.LoanListPage"
              Title="{Binding Title}">
 
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="8">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="16" Spacing="8">
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
 
-            <Label Text="Active" FontSize="18" FontAttributes="Bold" Margin="0,8,0,4" />
+                <Label Text="Active" FontSize="18" FontAttributes="Bold" Margin="0,8,0,4" />
             <CollectionView ItemsSource="{Binding ActiveLoans}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
@@ -65,6 +66,14 @@
             </CollectionView>
 
         </VerticalStackLayout>
-    </ScrollView>
+        </ScrollView>
+
+        <Button Grid.Row="1"
+                Text="+ Add Loan"
+                Command="{Binding AddLoanCommand}"
+                BackgroundColor="#1565C0"
+                TextColor="White"
+                Margin="16" />
+    </Grid>
 
 </ContentPage>

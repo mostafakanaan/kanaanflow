@@ -18,7 +18,11 @@
                     SelectedItem="{Binding Direction}" />
 
             <Label Text="Due Date (Optional)" FontAttributes="Bold" />
-            <DatePicker Date="{Binding DueDate}" />
+            <HorizontalStackLayout Spacing="8">
+                <Switch IsToggled="{Binding HasDueDate}" />
+                <Label Text="Set due date" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+            <DatePicker Date="{Binding DueDateValue}" IsVisible="{Binding HasDueDate}" />
 
             <Button Text="Save Loan"
                     Command="{Binding SaveCommand}"
