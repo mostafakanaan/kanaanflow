@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.AddLoanPage"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Label Text="Contact Name" FontAttributes="Bold" />
+            <Entry Text="{Binding ContactName}" Placeholder="Who is this with?" />
+
+            <Label Text="Amount" FontAttributes="Bold" />
+            <Entry Text="{Binding Amount}" Keyboard="Numeric" Placeholder="0.00" />
+
+            <Label Text="Direction" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Directions}"
+                    SelectedItem="{Binding Direction}" />
+
+            <Label Text="Due Date (Optional)" FontAttributes="Bold" />
+            <DatePicker Date="{Binding DueDate}" />
+
+            <Button Text="Save Loan"
+                    Command="{Binding SaveCommand}"
+                    BackgroundColor="#1565C0"
+                    TextColor="White" />
+
+            <Label Text="{Binding StatusMessage}"
+                   HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

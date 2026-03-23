@@ -1,0 +1,97 @@
+namespace KanaanFlow.App.ViewModels;
+
+using CommunityToolkit.Mvvm.Input;
+using KanaanFlow.Core.Abstractions;
+using KanaanFlow.Core.Enums;
+using KanaanFlow.Core.Models;
+using System;
+using System.Collections.ObjectModel;
+using System.Threading;
+using System.Threading.Tasks;
+
+public sealed partial class AddLoanViewModel : BaseViewModel
+{
+    private readonly ILoanRepository loanRepository;
+
+    private string contactName = string.Empty;
+    private decimal amount;
+    private PaymentDirection direction = PaymentDirection.Given;
+    private DateTime? dueDate;
+    private string statusMessage = string.Empty;
+
+    public string ContactName
+    {
+        get => contactName;
+        set => SetProperty(ref contactName, value);
+    }
+
+    public decimal Amount
+    {
+        get => amount;
+        set => SetProperty(ref amount, value);
+    }
+
+    public PaymentDirection Direction
+    {
+        get => direction;
+        set => SetProperty(ref direction, value);
+    }
+
+    public DateTime? DueDate
+    {
+        get => dueDate;
+        set => SetProperty(ref dueDate, value);
+    }
+
+    public string StatusMessage
+    {
+        get => statusMessage;
+        set => SetProperty(ref statusMessage, value);
+    }
+
+    public ObservableCollection<PaymentDirection> Directions { get; } = new ObservableCollection<PaymentDirection>
+    {
+        PaymentDirection.Given,
+        PaymentDirection.Received
+    };
+
+    public AddLoanViewModel(ILoanRepository loanRepositoryInstance)
+    {
+        loanRepository = loanRepositoryInstance;
+        Title = "Add Loan";
+    }
+
+    [RelayCommand]
+    public async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ContactName))
+        {
+            StatusMessage = "Contact name is required.";
+            return;
+        }
+
+        if (Amount <= 0)
+        {
+            StatusMessage = "Amount must be greater than 0.";
+            return;
+        }
+
+        Loan loan = new Loan
+        {
+            Id = Guid.NewGuid(),
+            ContactName = ContactName,
+            Amount = Amount,
+            RemainingAmount = Amount,
+            Direction = Direction,
+            Status = LoanStatus.Active,
+            DueDate = DueDate,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        await loanRepository.AddAsync(loan, CancellationToken.None);
+        StatusMessage = "Loan saved!";
+        ContactName = string.Empty;
+        Amount = 0;
+        DueDate = null;
+    }
+}

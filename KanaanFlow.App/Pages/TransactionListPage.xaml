@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.TransactionListPage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,8" Spacing="8">
+            <Label Text="Filter by Date" FontSize="14" TextColor="#888" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <DatePicker Grid.Column="0" Date="{Binding FilterFrom}" />
+                <DatePicker Grid.Column="1" Date="{Binding FilterTo}" />
+            </Grid>
+            <Button Text="Apply Filter" Command="{Binding LoadCommand}" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Transactions}" Margin="16,0">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem Text="Delete"
+                                           BackgroundColor="Red"
+                                           Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteCommand}"
+                                           CommandParameter="{Binding .}" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+
+                        <Grid Padding="0,10" ColumnDefinitions="Auto,*,Auto">
+                            <Border Grid.Column="0"
+                                    WidthRequest="40" HeightRequest="40"
+                                    BackgroundColor="#E3F2FD"
+                                    StrokeShape="RoundRectangle 20"
+                                    Margin="0,0,12,0">
+                                <Label Text="{Binding Category.Icon}"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="{Binding Description}" FontAttributes="Bold" />
+                                <Label Text="{Binding Date, StringFormat='{0:MMM dd}'}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2"
+                                   Text="{Binding Amount, StringFormat='{0:C}'}"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

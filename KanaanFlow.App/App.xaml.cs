@@ -53,7 +53,7 @@ public partial class App : Application
         LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
 
         if (status.IsValid)
-            await Shell.Current.GoToAsync("//Main");
+            await Shell.Current.GoToAsync("//Dashboard");
         else
             await Shell.Current.GoToAsync("//License");
     }

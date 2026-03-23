@@ -5,8 +5,30 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:pages="clr-namespace:KanaanFlow.App.Pages">
 
-    <ShellContent Route="License" ContentTemplate="{DataTemplate pages:LicensePage}" />
-    <ShellContent Route="Welcome" ContentTemplate="{DataTemplate pages:WelcomePage}" />
-    <ShellContent Route="Main" ContentTemplate="{DataTemplate local:MainPage}" />
+    <!-- License/Welcome flow (no tab bar) -->
+    <ShellContent Route="License" ContentTemplate="{DataTemplate pages:LicensePage}" Shell.TabBarIsVisible="False" />
+    <ShellContent Route="Welcome" ContentTemplate="{DataTemplate pages:WelcomePage}" Shell.TabBarIsVisible="False" />
+
+    <!-- Main app with tab bar -->
+    <TabBar Route="Main">
+        <Tab Title="Dashboard" Icon="dotnet_bot.png">
+            <ShellContent Route="Dashboard" ContentTemplate="{DataTemplate pages:DashboardPage}" />
+        </Tab>
+        <Tab Title="Transactions" Icon="dotnet_bot.png">
+            <ShellContent Route="Transactions" ContentTemplate="{DataTemplate pages:TransactionListPage}" />
+            <ShellContent Route="AddTransaction" ContentTemplate="{DataTemplate pages:AddTransactionPage}" Shell.TabBarIsVisible="False" />
+        </Tab>
+        <Tab Title="Loans" Icon="dotnet_bot.png">
+            <ShellContent Route="Loans" ContentTemplate="{DataTemplate pages:LoanListPage}" />
+            <ShellContent Route="AddLoan" ContentTemplate="{DataTemplate pages:AddLoanPage}" Shell.TabBarIsVisible="False" />
+        </Tab>
+        <Tab Title="Reports" Icon="dotnet_bot.png">
+            <ShellContent Route="Reports" ContentTemplate="{DataTemplate pages:ReportsPage}" />
+        </Tab>
+        <Tab Title="Settings" Icon="dotnet_bot.png">
+            <ShellContent Route="Settings" ContentTemplate="{DataTemplate pages:SettingsPage}" />
+            <ShellContent Route="Categories" ContentTemplate="{DataTemplate pages:CategoryListPage}" Shell.TabBarIsVisible="False" />
+        </Tab>
+    </TabBar>
 
 </Shell>

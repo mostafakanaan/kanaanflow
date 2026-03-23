@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.DashboardPage"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Label Text="Today's Summary"
+                   FontSize="20"
+                   FontAttributes="Bold" />
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Border Grid.Column="0" BackgroundColor="#E8F5E9" Padding="12" StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout>
+                        <Label Text="Income" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding TodayIncome, StringFormat='{0:C}'}" FontSize="18" FontAttributes="Bold" TextColor="#2E7D32" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="1" BackgroundColor="#FFEBEE" Padding="12" StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout>
+                        <Label Text="Expense" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding TodayExpense, StringFormat='{0:C}'}" FontSize="18" FontAttributes="Bold" TextColor="#C62828" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="2" BackgroundColor="#E3F2FD" Padding="12" StrokeShape="RoundRectangle 8">
+                    <VerticalStackLayout>
+                        <Label Text="Balance" FontSize="12" TextColor="#666" />
+                        <Label Text="{Binding Balance, StringFormat='{0:C}'}" FontSize="18" FontAttributes="Bold" TextColor="#1565C0" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+
+            <Label Text="Recent Transactions"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   Margin="0,8,0,0" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+
+            <CollectionView ItemsSource="{Binding RecentTransactions}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="0,8" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="{Binding Description}" FontAttributes="Bold" />
+                                <Label Text="{Binding Date, StringFormat='{0:MMM dd, yyyy}'}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="{Binding Amount, StringFormat='{0:C}'}"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

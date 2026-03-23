@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.ReportsPage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16,16,16,8" Spacing="8">
+            <Label Text="Period" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Periods}"
+                    SelectedItem="{Binding SelectedPeriod}" />
+            <Button Text="Generate" Command="{Binding LoadCommand}" BackgroundColor="#1565C0" TextColor="White" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Reports}" Margin="16,0">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="12" Margin="0,4" BackgroundColor="#FAFAFA" StrokeShape="RoundRectangle 8">
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                            <Label Grid.Row="0" Grid.ColumnSpan="2"
+                                   Text="{Binding Date, StringFormat='{0:MMM dd, yyyy}'}"
+                                   FontAttributes="Bold" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="Income" TextColor="#888" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="{Binding TotalIncome, StringFormat='{0:C}'}" TextColor="#2E7D32" FontAttributes="Bold" />
+                            <Label Grid.Row="2" Grid.Column="0" Text="Expense" TextColor="#888" />
+                            <Label Grid.Row="2" Grid.Column="1" Text="{Binding TotalExpense, StringFormat='{0:C}'}" TextColor="#C62828" FontAttributes="Bold" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

@@ -15,6 +15,6 @@ public partial class LicensePage : ContentPage
 
     private async void OnLicenseValidated(object? sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("//Main");
+        await Shell.Current.GoToAsync("//Dashboard");
     }
 }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.AddTransactionPage"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Label Text="Amount" FontAttributes="Bold" />
+            <Entry Text="{Binding Amount}" Keyboard="Numeric" Placeholder="0.00" />
+
+            <Label Text="Description" FontAttributes="Bold" />
+            <Entry Text="{Binding Description}" Placeholder="What was this for?" />
+
+            <Label Text="Type" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding TransactionTypes}"
+                    SelectedItem="{Binding Type}" />
+
+            <Label Text="Category" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Categories}"
+                    ItemDisplayBinding="{Binding Name}"
+                    SelectedItem="{Binding SelectedCategory}" />
+
+            <Label Text="Date" FontAttributes="Bold" />
+            <DatePicker Date="{Binding Date}" />
+
+            <Button Text="Save Transaction"
+                    Command="{Binding SaveCommand}"
+                    BackgroundColor="#1565C0"
+                    TextColor="White" />
+
+            <Label Text="{Binding StatusMessage}"
+                   TextColor="#2E7D32"
+                   HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

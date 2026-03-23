@@ -1,93 +1,69 @@
 # KanaanFlow
 
-KanaanFlow is an offline-first, cross-platform finance management application
-for small businesses.
+An offline-first personal finance management app built with .NET MAUI.
 
-It helps track income, expenses, loans, and receivables and generates
-daily financial reports (PDF and Excel).  
-The app syncs data to a central cloud store when a connection is available.
+## Architecture
 
-Built with .NET MAUI, EF Core, SQLite, and Supabase.
+Clean layered architecture with clear dependency boundaries:
 
-⚠️ Source-available. Commercial use requires permission.
+```
+KanaanFlow.Core      — No dependencies (domain models, interfaces, enums)
+KanaanFlow.Data      — Depends on Core (EF Core + SQLite repositories)
+KanaanFlow.Sync      — Depends on Core (sync placeholder)
+KanaanFlow.App       — Depends on Core, Data, Sync (MAUI UI, ViewModels, Services)
+KanaanFlow.Tests     — Depends on Core (xUnit tests)
+```
 
----
+## Features
 
-## Architecture Overview
+### Domain Models
+- **Transaction** — income/expense tracking with category, date, amount
+- **Category** — named categories with icon and color
+- **Loan** — given/received loans with status tracking (Active, PaidOff, Overdue)
+- **Receivable** — money owed to you
+- **DailyReport** — computed daily financial summary
 
-KanaanFlow follows a clean, layered architecture with clear separation
-between UI, domain logic, persistence, and synchronization.
+### Pages
+| Page | Description |
+|------|-------------|
+| Dashboard | Today's income/expense/balance + 5 recent transactions |
+| Transactions | Full list with date filter, swipe-to-delete |
+| Add Transaction | Form with amount, category, type toggle, date |
+| Loans | Grouped by status (Active / Overdue / Paid Off) |
+| Add Loan | Create new loan with contact, amount, direction |
+| Reports | Daily/Weekly/Monthly summaries |
+| Categories | Manage categories with add/delete |
+| Settings | License info and app version |
 
-## Project Structure
+### MVVM Stack
+- All ViewModels extend `BaseViewModel` (via `ObservableObject` from CommunityToolkit.Mvvm)
+- Commands use `[RelayCommand]` source generator
+- Lists use `ObservableCollection<T>`
+- DI wired in `MauiProgram.cs`
 
-**KanaanFlow.App:**
+### Data Layer
+- SQLite via EF Core
+- 4 repositories: Transaction, Category, Loan, Receivable
+- Auto-seeded default categories on first launch
+- `DbInitializer` runs `EnsureCreatedAsync` + seeds categories
 
-├─ MAUI UI
+### Sync
+- `ISyncService` interface defined in Core
+- Stub implementation in `KanaanFlow.Sync` — ready for future cloud sync
 
-├─ Navigation
+## Default Categories
+Food, Transport, Salary, Rent, Entertainment, Health, Shopping, Other
 
-├─ ViewModels
+## License System
+JWT-based license validation. Enter license key on first launch. Validated against embedded public key.
 
-└─ Views
+## Tech Stack
+- .NET 10 / .NET MAUI
+- EF Core 10 + SQLite
+- CommunityToolkit.Mvvm 8.4
+- xUnit for tests
 
-**KanaanFlow.Core:**
-
- ├─ Domain Models
-
- ├─ Enums
-
- ├─ Business Rules
- 
- └─ Interfaces
-
-**KanaanFlow.Data:**
-
- ├─ EF Core DbContext
-
- ├─ SQLite Persistence
-
- ├─ Migrations
-
- └─ Repositories
-
-**KanaanFlow.Sync:**
-
- ├─ Sync Services
-
- ├─ Supabase Integration
-
- └─ Conflict Resolution
-
-
-
-## Dependencies
-
-- KanaanFlow.App
-
-    - depends on Core, Data, Sync
-
-- KanaanFlow.Core
-
-    - no external dependencies
-
-- KanaanFlow.Data
-
-    - depends on Core
-
-- KanaanFlow.Sync
-
-    - depends on Core
-
-###
-
-- `App` depends on all other layers
-- `Core` contains no infrastructure dependencies
-- `Data` and `Sync` depend only on `Core`
-- No circular dependencies
-
-## Key Principles
-
-- Offline-first design
-- Clear domain separation
-- Minimal external dependencies
-- Future-ready for licensing and commercial distribution
+## Running Tests
+```bash
+dotnet test KanaanFlow.Tests/KanaanFlow.Tests.csproj
+```

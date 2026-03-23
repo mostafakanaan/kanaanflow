@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.LoanListPage"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="8">
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+
+            <Label Text="Active" FontSize="18" FontAttributes="Bold" Margin="0,8,0,4" />
+            <CollectionView ItemsSource="{Binding ActiveLoans}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="0,8" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="{Binding ContactName}" FontAttributes="Bold" />
+                                <Label Text="{Binding Direction}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
+                                <Label Text="{Binding RemainingAmount, StringFormat='{0:C}'}" FontAttributes="Bold" TextColor="#1565C0" />
+                                <Label Text="{Binding DueDate, StringFormat='Due: {0:MMM dd}'}" FontSize="11" TextColor="#888" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Overdue" FontSize="18" FontAttributes="Bold" TextColor="#C62828" Margin="0,8,0,4" />
+            <CollectionView ItemsSource="{Binding OverdueLoans}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="0,8" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="{Binding ContactName}" FontAttributes="Bold" TextColor="#C62828" />
+                                <Label Text="{Binding Direction}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="{Binding RemainingAmount, StringFormat='{0:C}'}"
+                                   FontAttributes="Bold"
+                                   TextColor="#C62828"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Paid Off" FontSize="18" FontAttributes="Bold" TextColor="#2E7D32" Margin="0,8,0,4" />
+            <CollectionView ItemsSource="{Binding PaidOffLoans}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="0,8" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout Grid.Column="0">
+                                <Label Text="{Binding ContactName}" FontAttributes="Bold" TextColor="#2E7D32" />
+                                <Label Text="{Binding Direction}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="{Binding Amount, StringFormat='{0:C}'}"
+                                   TextColor="#2E7D32"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.SettingsPage"
+             Title="{Binding Title}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Label Text="License" FontSize="20" FontAttributes="Bold" />
+            <Border Padding="12" BackgroundColor="#F5F5F5" StrokeShape="RoundRectangle 8">
+                <Label Text="{Binding LicenseInfo}" />
+            </Border>
+
+            <Label Text="App Info" FontSize="20" FontAttributes="Bold" Margin="0,8,0,0" />
+            <Border Padding="12" BackgroundColor="#F5F5F5" StrokeShape="RoundRectangle 8">
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Version" />
+                        <Label Grid.Column="1" Text="{Binding AppVersion}" FontAttributes="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="App" />
+                        <Label Grid.Column="1" Text="KanaanFlow" FontAttributes="Bold" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Author" />
+                        <Label Grid.Column="1" Text="Mustafa Kanaan" FontAttributes="Bold" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

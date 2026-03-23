@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="KanaanFlow.App.Pages.CategoryListPage"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="8">
+            <Label Text="Add Category" FontAttributes="Bold" />
+            <Entry Text="{Binding NewCategoryName}" Placeholder="Name" />
+            <Entry Text="{Binding NewCategoryIcon}" Placeholder="Icon emoji (e.g. 🏠)" />
+            <Entry Text="{Binding NewCategoryColor}" Placeholder="Color hex (e.g. #FF5722)" />
+            <Button Text="Add" Command="{Binding AddCommand}" BackgroundColor="#1565C0" TextColor="White" />
+            <Label Text="{Binding StatusMessage}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Categories}" Margin="16,0">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem Text="Delete"
+                                           BackgroundColor="Red"
+                                           Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteCommand}"
+                                           CommandParameter="{Binding .}" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+
+                        <Grid Padding="0,10" ColumnDefinitions="Auto,*">
+                            <Label Grid.Column="0" Text="{Binding Icon}" FontSize="24" Margin="0,0,12,0" VerticalOptions="Center" />
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center">
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding Color}" FontSize="12" TextColor="#888" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>

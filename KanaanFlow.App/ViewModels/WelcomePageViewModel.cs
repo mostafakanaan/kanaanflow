@@ -1,12 +1,11 @@
 namespace KanaanFlow.App.ViewModels;
 
+using CommunityToolkit.Mvvm.Input;
 using KanaanFlow.Core.Licensing;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-public sealed class WelcomePageViewModel : INotifyPropertyChanged
+public sealed partial class WelcomePageViewModel : BaseViewModel
 {
     private readonly ILicenseService licenseService;
 
@@ -14,31 +13,31 @@ public sealed class WelcomePageViewModel : INotifyPropertyChanged
     private string validUntil = string.Empty;
     private bool shouldRedirectToLicense;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-
     public string Customer
     {
         get => customer;
-        set { customer = value; OnPropertyChanged(); }
+        set => SetProperty(ref customer, value);
     }
 
     public string ValidUntil
     {
         get => validUntil;
-        set { validUntil = value; OnPropertyChanged(); }
+        set => SetProperty(ref validUntil, value);
     }
 
     public bool ShouldRedirectToLicense
     {
         get => shouldRedirectToLicense;
-        set { shouldRedirectToLicense = value; OnPropertyChanged(); }
+        set => SetProperty(ref shouldRedirectToLicense, value);
     }
 
     public WelcomePageViewModel(ILicenseService licenseServiceInstance)
     {
         licenseService = licenseServiceInstance;
+        Title = "Welcome";
     }
 
+    [RelayCommand]
     public async Task LoadAsync()
     {
         LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
@@ -51,10 +50,5 @@ public sealed class WelcomePageViewModel : INotifyPropertyChanged
 
         Customer = "Customer: " + status.Claims.Customer;
         ValidUntil = "Valid until (UTC): " + status.Claims.ValidUntilUtc.ToString("u");
-    }
-
-    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
