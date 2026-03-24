@@ -1,10 +1,11 @@
 namespace KanaanFlow.App.ViewModels;
 
+using CommunityToolkit.Mvvm.Input;
 using KanaanFlow.Core.Licensing;
 using System.Threading;
 using System.Threading.Tasks;
 
-public sealed class SettingsViewModel : BaseViewModel
+public sealed partial class SettingsViewModel : BaseViewModel
 {
     private readonly ILicenseService licenseService;
 
@@ -29,6 +30,7 @@ public sealed class SettingsViewModel : BaseViewModel
         Title = "Settings";
     }
 
+    [RelayCommand]
     public async Task LoadAsync()
     {
         LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);

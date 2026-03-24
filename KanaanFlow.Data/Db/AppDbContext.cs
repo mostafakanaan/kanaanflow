@@ -48,6 +48,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.RemainingAmount).IsRequired().HasColumnType("decimal(18,2)");
             entity.Property(x => x.Direction).IsRequired();
             entity.Property(x => x.Status).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(1000);
             entity.Property(x => x.CreatedUtc).IsRequired();
         });
 

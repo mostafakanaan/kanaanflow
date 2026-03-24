@@ -12,5 +12,6 @@ public sealed class Loan
     public PaymentDirection Direction { get; set; }
     public LoanStatus Status { get; set; }
     public DateTime? DueDate { get; set; }
+    public string Notes { get; set; } = string.Empty;
     public DateTime CreatedUtc { get; set; }
 }

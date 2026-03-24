@@ -16,6 +16,6 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        _ = viewModel.LoadAsync();
+        _ = viewModel.LoadCommand.ExecuteAsync(null);
     }
 }

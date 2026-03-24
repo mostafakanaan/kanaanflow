@@ -1,4 +1,4 @@
-namespace KanaanFlow.App.Services;
+namespace KanaanFlow.Data.Services;
 
 using KanaanFlow.Core.Abstractions;
 using KanaanFlow.Core.Enums;

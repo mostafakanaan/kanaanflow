@@ -1,11 +1,11 @@
 using KanaanFlow.App.Licensing;
 using KanaanFlow.App.Pages;
-using KanaanFlow.App.Services;
 using KanaanFlow.App.ViewModels;
 using KanaanFlow.Core.Abstractions;
 using KanaanFlow.Core.Licensing;
 using KanaanFlow.Data.Db;
 using KanaanFlow.Data.Repositories;
+using KanaanFlow.Data.Services;
 using KanaanFlow.Sync;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -35,17 +35,17 @@ public static class MauiProgram
         builder.Services.AddDbContext<AppDbContext>(options =>
         {
             options.UseSqlite(connectionString);
-        });
+        }, ServiceLifetime.Transient);
 
         // Data
         builder.Services.AddSingleton<DbInitializer>();
-        builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-        builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-        builder.Services.AddScoped<ILoanRepository, LoanRepository>();
+        builder.Services.AddTransient<ITransactionRepository, TransactionRepository>();
+        builder.Services.AddTransient<ICategoryRepository, CategoryRepository>();
+        builder.Services.AddTransient<ILoanRepository, LoanRepository>();
 
         // Services
-        builder.Services.AddScoped<IReportService, ReportService>();
-        builder.Services.AddScoped<ISyncService, SyncService>();
+        builder.Services.AddTransient<IReportService, ReportService>();
+        builder.Services.AddTransient<ISyncService, SyncService>();
 
         // License
         builder.Services.AddSingleton<ILicenseService, LicenseService>();

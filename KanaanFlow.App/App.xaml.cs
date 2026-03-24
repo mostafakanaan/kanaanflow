@@ -10,6 +10,7 @@ public partial class App : Application
     private readonly DbInitializer dbInitializer;
     private readonly ILicenseService licenseService;
     private readonly ILogger<App> logger;
+    private readonly Task dbInitTask;
 
     public App(DbInitializer dbInitializerInstance, ILicenseService licenseServiceInstance, ILogger<App> loggerInstance)
     {
@@ -19,20 +20,13 @@ public partial class App : Application
         licenseService = licenseServiceInstance;
         logger = loggerInstance;
 
-        _ = InitializeAsync();
+        dbInitTask = InitializeAsync();
     }
 
     private async Task InitializeAsync()
     {
-        try
-        {
-            await dbInitializer.InitializeAsync(CancellationToken.None);
-            logger.LogInformation("Database initialized successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Database initialization failed.");
-        }
+        await dbInitializer.InitializeAsync(CancellationToken.None);
+        logger.LogInformation("Database initialized successfully.");
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
@@ -41,14 +35,18 @@ public partial class App : Application
 
         Window window = new(shell);
 
-        _ = GateAsync();
+        _ = GateAsync().ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                logger.LogError(t.Exception, "License gate navigation failed.");
+        }, TaskScheduler.Default);
 
         return window;
     }
 
     private async Task GateAsync()
     {
-        await Task.Delay(50);
+        await dbInitTask;
 
         LicenseStatus status = await licenseService.GetStatusAsync(CancellationToken.None);
 
