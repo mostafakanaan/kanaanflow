@@ -26,6 +26,8 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.CategoryId).IsRequired();
             entity.Property(x => x.CreatedUtc).IsRequired();
             entity.Property(x => x.ModifiedUtc).IsRequired();
+            entity.Property(x => x.Currency).IsRequired();
+            entity.Ignore(x => x.FormattedAmount);
             entity.HasOne(x => x.Category)
                   .WithMany()
                   .HasForeignKey(x => x.CategoryId)
@@ -49,7 +51,10 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.Direction).IsRequired();
             entity.Property(x => x.Status).IsRequired();
             entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.Currency).IsRequired();
             entity.Property(x => x.CreatedUtc).IsRequired();
+            entity.Ignore(x => x.FormattedAmount);
+            entity.Ignore(x => x.FormattedRemainingAmount);
         });
 
         }

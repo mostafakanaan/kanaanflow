@@ -1,6 +1,7 @@
 namespace KanaanFlow.App.ViewModels;
 
 using CommunityToolkit.Mvvm.Input;
+using KanaanFlow.App.Localization;
 using KanaanFlow.Core.Abstractions;
 using KanaanFlow.Core.Enums;
 using KanaanFlow.Core.Models;
@@ -18,6 +19,7 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
     private decimal amount;
     private DateTime date = DateTime.Today;
     private TransactionType type = TransactionType.Expense;
+    private Currency selectedCurrency = Currency.USD;
     private Category? selectedCategory;
     private string statusMessage = string.Empty;
 
@@ -45,6 +47,12 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
         set => SetProperty(ref type, value);
     }
 
+    public Currency SelectedCurrency
+    {
+        get => selectedCurrency;
+        set => SetProperty(ref selectedCurrency, value);
+    }
+
     public Category? SelectedCategory
     {
         get => selectedCategory;
@@ -63,12 +71,19 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
         TransactionType.Income,
         TransactionType.Expense
     };
+    public ObservableCollection<Currency> Currencies { get; } = new ObservableCollection<Currency>
+    {
+        Currency.USD,
+        Currency.EUR,
+        Currency.TL,
+        Currency.SP
+    };
 
     public AddTransactionViewModel(ITransactionRepository transactionRepositoryInstance, ICategoryRepository categoryRepositoryInstance)
     {
         transactionRepository = transactionRepositoryInstance;
         categoryRepository = categoryRepositoryInstance;
-        Title = "Add Transaction";
+        Title = LocalizationManager.Instance["AddTransaction"];
     }
 
     [RelayCommand]
@@ -92,13 +107,13 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
     {
         if (SelectedCategory == null)
         {
-            StatusMessage = "Please select a category.";
+            StatusMessage = LocalizationManager.Instance["SelectCategory"];
             return;
         }
 
         if (Amount <= 0)
         {
-            StatusMessage = "Amount must be greater than 0.";
+            StatusMessage = LocalizationManager.Instance["AmountGreaterThanZero"];
             return;
         }
 
@@ -109,6 +124,7 @@ public sealed partial class AddTransactionViewModel : BaseViewModel
             Description = Description,
             Date = Date,
             Type = Type,
+            Currency = SelectedCurrency,
             CategoryId = SelectedCategory.Id,
             CreatedUtc = DateTime.UtcNow,
             ModifiedUtc = DateTime.UtcNow

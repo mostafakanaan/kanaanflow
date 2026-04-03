@@ -4,18 +4,19 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:KanaanFlow.App.ViewModels"
+    xmlns:loc="clr-namespace:KanaanFlow.App.Localization"
     x:DataType="vm:LicensePageViewModel"
-    Title="License">
+    Title="{loc:Translate License}">
 
     <VerticalStackLayout Padding="16" Spacing="12">
-        <Label Text="Enter license key" FontSize="24" FontAttributes="Bold" />
-        <Label Text="Paste the key and tap Save." />
+        <Label Text="{loc:Translate EnterLicenseKey}" FontSize="24" FontAttributes="Bold" />
+        <Label Text="{loc:Translate PasteAndSave}" />
 
         <Editor Text="{Binding LicenseKey}"
                 AutoSize="TextChanges"
                 HeightRequest="120" />
 
-        <Button Text="Save" Command="{Binding SaveCommand}" />
+        <Button Text="{loc:Translate Save}" Command="{Binding SaveCommand}" />
 
         <Label Text="{Binding StatusMessage}" />
     </VerticalStackLayout>

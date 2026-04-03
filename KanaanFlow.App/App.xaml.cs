@@ -1,4 +1,5 @@
-﻿using KanaanFlow.Core.Licensing;
+﻿using KanaanFlow.App.Localization;
+using KanaanFlow.Core.Licensing;
 using KanaanFlow.Data.Db;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls;
@@ -14,6 +15,8 @@ public partial class App : Application
 
     public App(DbInitializer dbInitializerInstance, ILicenseService licenseServiceInstance, ILogger<App> loggerInstance)
     {
+        LocalizationManager.Instance.LoadSavedLanguage();
+
         InitializeComponent();
 
         dbInitializer = dbInitializerInstance;
@@ -32,6 +35,9 @@ public partial class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         Shell shell = new AppShell();
+        shell.FlowDirection = LocalizationManager.Instance.IsRtl
+            ? FlowDirection.RightToLeft
+            : FlowDirection.LeftToRight;
 
         Window window = new(shell);
 

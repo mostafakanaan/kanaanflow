@@ -1,6 +1,7 @@
 namespace KanaanFlow.App.ViewModels;
 
 using CommunityToolkit.Mvvm.Input;
+using KanaanFlow.App.Localization;
 using KanaanFlow.Core.Abstractions;
 using KanaanFlow.Core.Models;
 using System;

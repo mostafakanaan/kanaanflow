@@ -1,30 +1,35 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:KanaanFlow.App.Localization"
              x:Class="KanaanFlow.App.Pages.AddLoanPage"
              Title="{Binding Title}">
 
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="16">
 
-            <Label Text="Contact Name" FontAttributes="Bold" />
-            <Entry Text="{Binding ContactName}" Placeholder="Who is this with?" />
+            <Label Text="{loc:Translate ContactName}" FontAttributes="Bold" />
+            <Entry Text="{Binding ContactName}" Placeholder="{loc:Translate ContactPlaceholder}" />
 
-            <Label Text="Amount" FontAttributes="Bold" />
+            <Label Text="{loc:Translate Amount}" FontAttributes="Bold" />
             <Entry Text="{Binding Amount}" Keyboard="Numeric" Placeholder="0.00" />
 
-            <Label Text="Direction" FontAttributes="Bold" />
+            <Label Text="{loc:Translate CurrencyLabel}" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Currencies}"
+                    SelectedItem="{Binding SelectedCurrency}" />
+
+            <Label Text="{loc:Translate Direction}" FontAttributes="Bold" />
             <Picker ItemsSource="{Binding Directions}"
                     SelectedItem="{Binding Direction}" />
 
-            <Label Text="Due Date (Optional)" FontAttributes="Bold" />
+            <Label Text="{loc:Translate DueDateOptional}" FontAttributes="Bold" />
             <HorizontalStackLayout Spacing="8">
                 <Switch IsToggled="{Binding HasDueDate}" />
-                <Label Text="Set due date" VerticalOptions="Center" />
+                <Label Text="{loc:Translate SetDueDate}" VerticalOptions="Center" />
             </HorizontalStackLayout>
             <DatePicker Date="{Binding DueDateValue}" IsVisible="{Binding HasDueDate}" />
 
-            <Button Text="Save Loan"
+            <Button Text="{loc:Translate SaveLoan}"
                     Command="{Binding SaveCommand}"
                     BackgroundColor="#1565C0"
                     TextColor="White" />

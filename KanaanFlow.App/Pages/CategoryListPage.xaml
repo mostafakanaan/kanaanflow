@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:KanaanFlow.App.Localization"
              x:Class="KanaanFlow.App.Pages.CategoryListPage"
              Title="{Binding Title}">
 
     <Grid RowDefinitions="Auto,*">
 
         <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="8">
-            <Label Text="Add Category" FontAttributes="Bold" />
-            <Entry Text="{Binding NewCategoryName}" Placeholder="Name" />
-            <Entry Text="{Binding NewCategoryIcon}" Placeholder="Icon emoji (e.g. 🏠)" />
-            <Entry Text="{Binding NewCategoryColor}" Placeholder="Color hex (e.g. #FF5722)" />
-            <Button Text="Add" Command="{Binding AddCommand}" BackgroundColor="#1565C0" TextColor="White" />
+            <Label Text="{loc:Translate AddCategory}" FontAttributes="Bold" />
+            <Entry Text="{Binding NewCategoryName}" Placeholder="{loc:Translate Name}" />
+            <Entry Text="{Binding NewCategoryIcon}" Placeholder="{loc:Translate IconPlaceholder}" />
+            <Entry Text="{Binding NewCategoryColor}" Placeholder="{loc:Translate ColorPlaceholder}" />
+            <Button Text="{loc:Translate Add}" Command="{Binding AddCommand}" BackgroundColor="#1565C0" TextColor="White" />
             <Label Text="{Binding StatusMessage}" HorizontalOptions="Center" />
         </VerticalStackLayout>
 
@@ -21,7 +22,7 @@
                     <SwipeView>
                         <SwipeView.RightItems>
                             <SwipeItems>
-                                <SwipeItem Text="Delete"
+                                <SwipeItem Text="{loc:Translate Delete}"
                                            BackgroundColor="Red"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteCommand}"
                                            CommandParameter="{Binding .}" />

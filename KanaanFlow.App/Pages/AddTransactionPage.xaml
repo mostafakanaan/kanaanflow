@@ -1,31 +1,36 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:loc="clr-namespace:KanaanFlow.App.Localization"
              x:Class="KanaanFlow.App.Pages.AddTransactionPage"
              Title="{Binding Title}">
 
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="16">
 
-            <Label Text="Amount" FontAttributes="Bold" />
+            <Label Text="{loc:Translate Amount}" FontAttributes="Bold" />
             <Entry Text="{Binding Amount}" Keyboard="Numeric" Placeholder="0.00" />
 
-            <Label Text="Description" FontAttributes="Bold" />
-            <Entry Text="{Binding Description}" Placeholder="What was this for?" />
+            <Label Text="{loc:Translate CurrencyLabel}" FontAttributes="Bold" />
+            <Picker ItemsSource="{Binding Currencies}"
+                    SelectedItem="{Binding SelectedCurrency}" />
 
-            <Label Text="Type" FontAttributes="Bold" />
+            <Label Text="{loc:Translate Description}" FontAttributes="Bold" />
+            <Entry Text="{Binding Description}" Placeholder="{loc:Translate DescriptionPlaceholder}" />
+
+            <Label Text="{loc:Translate Type}" FontAttributes="Bold" />
             <Picker ItemsSource="{Binding TransactionTypes}"
                     SelectedItem="{Binding Type}" />
 
-            <Label Text="Category" FontAttributes="Bold" />
+            <Label Text="{loc:Translate Category}" FontAttributes="Bold" />
             <Picker ItemsSource="{Binding Categories}"
                     ItemDisplayBinding="{Binding Name}"
                     SelectedItem="{Binding SelectedCategory}" />
 
-            <Label Text="Date" FontAttributes="Bold" />
+            <Label Text="{loc:Translate Date}" FontAttributes="Bold" />
             <DatePicker Date="{Binding Date}" />
 
-            <Button Text="Save Transaction"
+            <Button Text="{loc:Translate SaveTransaction}"
                     Command="{Binding SaveCommand}"
                     BackgroundColor="#1565C0"
                     TextColor="White" />

@@ -67,6 +67,8 @@ public sealed class DbInitializer
         // Add ALTER TABLE statements here as the schema evolves.
         // Each migration checks for its own precondition to be idempotent.
         await AddColumnIfNotExistsAsync(db, "Loans", "Notes", "TEXT DEFAULT '' NOT NULL", cancellationToken);
+        await AddColumnIfNotExistsAsync(db, "Transactions", "Currency", "INTEGER DEFAULT 0 NOT NULL", cancellationToken);
+        await AddColumnIfNotExistsAsync(db, "Loans", "Currency", "INTEGER DEFAULT 0 NOT NULL", cancellationToken);
     }
 
     private static async Task AddColumnIfNotExistsAsync(

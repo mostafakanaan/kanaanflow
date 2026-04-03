@@ -4,11 +4,12 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:KanaanFlow.App.ViewModels"
+    xmlns:loc="clr-namespace:KanaanFlow.App.Localization"
     x:DataType="vm:WelcomePageViewModel"
-    Title="Welcome">
+    Title="{loc:Translate Welcome}">
 
     <VerticalStackLayout Padding="16" Spacing="12">
-        <Label Text="Welcome" FontSize="28" FontAttributes="Bold" />
+        <Label Text="{loc:Translate Welcome}" FontSize="28" FontAttributes="Bold" />
         <Label Text="{Binding Customer}" FontSize="18" />
         <Label Text="{Binding ValidUntil}" FontSize="16" />
     </VerticalStackLayout>

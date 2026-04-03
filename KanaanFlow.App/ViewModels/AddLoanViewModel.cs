@@ -1,6 +1,7 @@
 namespace KanaanFlow.App.ViewModels;
 
 using CommunityToolkit.Mvvm.Input;
+using KanaanFlow.App.Localization;
 using KanaanFlow.Core.Abstractions;
 using KanaanFlow.Core.Enums;
 using KanaanFlow.Core.Models;
@@ -16,6 +17,7 @@ public sealed partial class AddLoanViewModel : BaseViewModel
     private string contactName = string.Empty;
     private decimal amount;
     private PaymentDirection direction = PaymentDirection.Given;
+    private Currency selectedCurrency = Currency.USD;
     private bool hasDueDate;
     private DateTime dueDateValue = DateTime.Today;
     private string statusMessage = string.Empty;
@@ -36,6 +38,12 @@ public sealed partial class AddLoanViewModel : BaseViewModel
     {
         get => direction;
         set => SetProperty(ref direction, value);
+    }
+
+    public Currency SelectedCurrency
+    {
+        get => selectedCurrency;
+        set => SetProperty(ref selectedCurrency, value);
     }
 
     public bool HasDueDate
@@ -62,10 +70,18 @@ public sealed partial class AddLoanViewModel : BaseViewModel
         PaymentDirection.Received
     };
 
+    public ObservableCollection<Currency> Currencies { get; } = new ObservableCollection<Currency>
+    {
+        Currency.USD,
+        Currency.EUR,
+        Currency.TL,
+        Currency.SP
+    };
+
     public AddLoanViewModel(ILoanRepository loanRepositoryInstance)
     {
         loanRepository = loanRepositoryInstance;
-        Title = "Add Loan";
+        Title = LocalizationManager.Instance["AddLoan"];
     }
 
     [RelayCommand]
@@ -73,13 +89,13 @@ public sealed partial class AddLoanViewModel : BaseViewModel
     {
         if (string.IsNullOrWhiteSpace(ContactName))
         {
-            StatusMessage = "Contact name is required.";
+            StatusMessage = LocalizationManager.Instance["ContactRequired"];
             return;
         }
 
         if (Amount <= 0)
         {
-            StatusMessage = "Amount must be greater than 0.";
+            StatusMessage = LocalizationManager.Instance["AmountGreaterThanZero"];
             return;
         }
 
@@ -90,6 +106,7 @@ public sealed partial class AddLoanViewModel : BaseViewModel
             Amount = Amount,
             RemainingAmount = Amount,
             Direction = Direction,
+            Currency = SelectedCurrency,
             Status = LoanStatus.Active,
             DueDate = HasDueDate ? DueDateValue : null,
             CreatedUtc = DateTime.UtcNow
