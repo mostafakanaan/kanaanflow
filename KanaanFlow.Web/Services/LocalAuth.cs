@@ -89,7 +89,7 @@ public sealed class LocalAuth
     }
 
     /// <summary>Sets a new password for a forgotten one (needs the master password) and logs in. Returns an error code, or null.</summary>
-    public async Task<string?> ResetPasswordAsync(string name, string newPassword, string masterPassword)
+    public async Task<string?> ResetPasswordAsync(string name, string masterPassword, string newPassword)
     {
         if (!FixedEquals(masterPassword, MasterPassword))
         {

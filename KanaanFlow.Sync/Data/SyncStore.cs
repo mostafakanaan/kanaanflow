@@ -171,7 +171,7 @@ public sealed class SyncStore
     /// Sets a new password for the active member with this name (the person knew the master password), signs them out
     /// everywhere and returns a new session. Returns null when no active member has that name.
     /// </summary>
-    public async Task<SessionResponse?> ResetPasswordByNameAsync(string name, string newPassword)
+    public async Task<SessionResponse?> ResetPasswordByNameAsync(string name, string newPassword, string clientIp)
     {
         await using NpgsqlConnection connection = await db.OpenConnectionAsync();
         await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
@@ -187,6 +187,8 @@ public sealed class SyncStore
             }
         }
 
+        // Hash either way, so an unknown name takes as long as a real one and names can't be probed.
+        string hash = PasswordHasher.Hash(newPassword);
         if (member == null)
         {
             return null;
@@ -194,7 +196,7 @@ public sealed class SyncStore
 
         await using (NpgsqlCommand update = new NpgsqlCommand("update members set password_hash = @hash where id = @id", connection, tx))
         {
-            update.Parameters.AddWithValue("hash", PasswordHasher.Hash(newPassword));
+            update.Parameters.AddWithValue("hash", hash);
             update.Parameters.AddWithValue("id", member.Id);
             await update.ExecuteNonQueryAsync();
         }
@@ -207,6 +209,7 @@ public sealed class SyncStore
 
         string token = await CreateSessionAsync(connection, tx, member.Id);
         await tx.CommitAsync();
+        logger.LogWarning("Password of {Name} ({Id}) was reset with the master password from {Ip}.", member.Name, member.Id, clientIp);
         return new SessionResponse(token, member);
     }
 

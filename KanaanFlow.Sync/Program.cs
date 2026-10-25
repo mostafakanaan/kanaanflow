@@ -81,7 +81,7 @@ api.MapPost("/login", async (LoginRequest request, SyncStore store) =>
 }).RequireRateLimiting("signin");
 
 // Forgotten password: the master password lets the person set a new one. Signs them out on their other devices.
-api.MapPost("/reset-password", async (ResetPasswordRequest request, SyncStore store) =>
+api.MapPost("/reset-password", async (ResetPasswordRequest request, HttpContext context, SyncStore store) =>
 {
     if (!SameText(request.MasterPassword, masterPassword))
     {
@@ -94,7 +94,7 @@ api.MapPost("/reset-password", async (ResetPasswordRequest request, SyncStore st
         return Error(problem);
     }
 
-    SessionResponse? session = await store.ResetPasswordByNameAsync(request.Name ?? string.Empty, request.NewPassword);
+    SessionResponse? session = await store.ResetPasswordByNameAsync(request.Name ?? string.Empty, request.NewPassword, ClientIp(context));
     return session == null ? Error("wrong-name-or-password", StatusCodes.Status401Unauthorized) : Results.Ok(session);
 }).RequireRateLimiting("signin");
 

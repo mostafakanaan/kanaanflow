@@ -359,6 +359,7 @@ public static class Strings
         ["resetPasswordTitle"] = "تعيين كلمة مرور جديدة",
         ["resetPasswordHint"] = "اكتب اسمك وكلمة مرور جديدة. يحتاج ذلك كلمة المرور الرئيسية، وسيتم تسجيل خروجك من أجهزتك الأخرى.",
         ["passwordReset"] = "تم تعيين كلمة المرور الجديدة",
+        ["resetPasswordHintLocal"] = "اكتب اسمك وكلمة مرور جديدة. يحتاج ذلك كلمة المرور الرئيسية.",
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -692,5 +693,6 @@ public static class Strings
         ["resetPasswordTitle"] = "Set a new password",
         ["resetPasswordHint"] = "Type your name and a new password. This needs the master password, and signs you out on your other devices.",
         ["passwordReset"] = "New password set",
+        ["resetPasswordHintLocal"] = "Type your name and a new password. This needs the master password.",
     };
 }
