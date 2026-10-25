@@ -24,54 +24,67 @@
 </section>
 
 <section class="section" style="gap:8px">
-    <h2 class="h3">2. @T("pcatFilter")</h2>
-    <div class="wrap">
-        <button type="button" class="sel chip" aria-pressed="@(peopleCats.Count == 0 ? "true" : "false")" @onclick="() => peopleCats.Clear()">@T("allCats")</button>
-        @foreach (PeopleCategory category in Book.PeopleCategories)
+    <h2 class="h3">2. @T("pickPerson")</h2>
+    <SearchPicker ContactId="@pickContact" CategoryId="@PickedCategory" OnChange="OnPick" />
+
+    <button type="button" class="adv-toggle" aria-expanded="@(advanced ? "true" : "false")" @onclick="() => advanced = !advanced">
+        <Icon Name="settings" Size="20" />
+        <span>@T("advancedFilters")</span>
+        @if (AdvancedCount > 0)
         {
-            string id = category.Id;
-            <button type="button" class="sel chip" aria-pressed="@(peopleCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(peopleCats, id)">@category.Name(Lang)</button>
+            <span class="count-pill">@AdvancedCount</span>
         }
-    </div>
-    <h2 class="h3" style="margin-top:6px">3. @T("types")</h2>
-    <div class="wrap">
-        <button type="button" class="sel chip" aria-pressed="@(entryCats.Count == 0 ? "true" : "false")" @onclick="() => entryCats.Clear()">@T("allTypes")</button>
-        @foreach (EntryCategory category in Book.EntryCategories)
-        {
-            string id = category.Id;
-            <button type="button" class="sel chip" aria-pressed="@(entryCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(entryCats, id)">@category.Name(Lang)</button>
-        }
-    </div>
-    <label class="field" style="margin-top:4px">@T("person")
-        <select class="select" @bind="personId">
-            <option value="">@T("allPeople")</option>
-            @foreach (Contact contact in Book.Contacts.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase))
+        <Icon Name="chevron" Size="16" Class="@(advanced ? "chev-up" : "chev-down")" />
+    </button>
+
+    @if (advanced)
+    {
+        <div class="adv-panel">
+            <h3 class="h3">@T("types")</h3>
+            <div class="wrap">
+                <button type="button" class="sel chip" aria-pressed="@(entryCats.Count == 0 ? "true" : "false")" @onclick="() => entryCats.Clear()">@T("allTypes")</button>
+                @foreach (EntryCategory category in Book.EntryCategories)
+                {
+                    string id = category.Id;
+                    <button type="button" class="sel chip" aria-pressed="@(entryCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(entryCats, id)">@category.Name(Lang)</button>
+                }
+            </div>
+            <h3 class="h3">@T("pcatFilter")</h3>
+            <div class="wrap">
+                <button type="button" class="sel chip" aria-pressed="@(peopleCats.Count == 0 ? "true" : "false")" @onclick="() => peopleCats.Clear()">@T("allCats")</button>
+                @foreach (PeopleCategory category in Book.PeopleCategories)
+                {
+                    string id = category.Id;
+                    <button type="button" class="sel chip" aria-pressed="@(peopleCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(peopleCats, id)">@category.Name(Lang)</button>
+                }
+            </div>
+            <label class="field">@T("recordedBy")
+                <select class="select" @bind="createdBy">
+                    <option value="">@T("everyone")</option>
+                    @foreach (TeamMember member in Book.Members.Where(m => m.Name.Length > 0).OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase))
+                    {
+                        <option value="@member.Id">@member.Name@(member.Active ? string.Empty : " (" + T("removed") + ")")</option>
+                    }
+                </select>
+            </label>
+            <h3 class="h3">@T("approval")</h3>
+            <div class="wrap">
+                @foreach ((ApprovalFilter Value, string Label) a in Approvals)
+                {
+                    ApprovalFilter value = a.Value;
+                    <button type="button" class="sel chip" aria-pressed="@(approval == value ? "true" : "false")" @onclick="() => approval = value">@T(a.Label)</button>
+                }
+            </div>
+            @if (AdvancedCount > 0)
             {
-                <option value="@contact.Id">@contact.Name</option>
+                <button type="button" class="link-btn" style="align-self:flex-start" @onclick="ClearAdvanced">@T("clearFilters")</button>
             }
-        </select>
-    </label>
-    <label class="field">@T("recordedBy")
-        <select class="select" @bind="createdBy">
-            <option value="">@T("everyone")</option>
-            @foreach (TeamMember member in Book.Members.Where(m => m.Name.Length > 0).OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase))
-            {
-                <option value="@member.Id">@member.Name@(member.Active ? string.Empty : " (" + T("removed") + ")")</option>
-            }
-        </select>
-    </label>
-    <h2 class="h3" style="margin-top:6px">@T("approval")</h2>
-    <div class="wrap">
-        @foreach ((ApprovalFilter Value, string Label) a in Approvals)
-        {
-            ApprovalFilter value = a.Value;
-            <button type="button" class="sel chip" aria-pressed="@(approval == value ? "true" : "false")" @onclick="() => approval = value">@T(a.Label)</button>
-        }
-    </div>
+        </div>
+    }
 </section>
 
 <section class="list-card">
-    <div class="summary-head"><b>4. @T("summary")</b><span style="font-size:15px">@result.Entries.Count @T("entriesN")</span></div>
+    <div class="summary-head"><b>3. @T("summary")</b><span style="font-size:15px">@result.Entries.Count @T("entriesN")</span></div>
     <div class="tbl-head cols-4"><span>@T("currency")</span><span>@T("inTotal")</span><span>@T("outTotal")</span><span>@T("net")</span></div>
     @foreach (CurrencyTotals row in result.Totals)
     {
@@ -121,7 +134,9 @@
     private DateOnly to;
     private readonly HashSet<string> peopleCats = new HashSet<string>();
     private readonly HashSet<string> entryCats = new HashSet<string>();
-    private string personId = string.Empty;
+    private string? pickContact;
+    private string? pickCategory;
+    private bool advanced;
     private string createdBy = string.Empty;
     private ApprovalFilter approval = ApprovalFilter.All;
 
@@ -154,7 +169,7 @@
     {
         ReportFilter filter = new ReportFilter
         {
-            ContactId = personId.Length > 0 ? personId : null,
+            ContactId = pickContact,
             CreatedBy = createdBy.Length > 0 ? createdBy : null,
             Approval = approval
         };
@@ -183,6 +198,39 @@
         return filter;
     }
 
+    /// <summary>How many filters under "Advanced filtering" are on.</summary>
+    private int AdvancedCount => (entryCats.Count > 0 ? 1 : 0) + (peopleCats.Count > 0 && PickedCategory == null ? 1 : 0) + (createdBy.Length > 0 ? 1 : 0) + (approval != ApprovalFilter.All ? 1 : 0);
+
+    /// <summary>The entity picked above: it is the one people-category filter (choosing others under Advanced replaces it).</summary>
+    private string? PickedCategory => peopleCats.Count == 1 && peopleCats.Contains(pickCategory ?? string.Empty) ? pickCategory : null;
+
+    private void OnPick((string? ContactId, string? CategoryId) pick)
+    {
+        if (PickedCategory != null || pick.CategoryId != null)
+        {
+            peopleCats.Clear();
+        }
+
+        pickContact = pick.ContactId;
+        pickCategory = pick.CategoryId;
+        if (pickCategory != null)
+        {
+            peopleCats.Add(pickCategory);
+        }
+    }
+
+    private void ClearAdvanced()
+    {
+        entryCats.Clear();
+        if (PickedCategory == null)
+        {
+            peopleCats.Clear();
+        }
+
+        createdBy = string.Empty;
+        approval = ApprovalFilter.All;
+    }
+
     private static void Toggle(HashSet<string> set, string id)
     {
         if (!set.Remove(id))
@@ -207,9 +255,9 @@
             lines.Add(T("typeCol") + ": " + string.Join("، ", entryCats.Select(Books.EntryCategoryName)));
         }
 
-        if (personId.Length > 0)
+        if (pickContact != null)
         {
-            lines.Add(T("personCol") + ": " + Books.ContactName(personId));
+            lines.Add(T("personCol") + ": " + Books.ContactName(pickContact));
         }
 
         if (createdBy.Length > 0)

@@ -1,0 +1,117 @@
+@inherits KfComponent
+
+@* Picks one person/company or one entity (people category) for a report, with search. *@
+<div class="picker">
+    <button type="button" class="picker-btn" aria-haspopup="dialog" @onclick="OpenAsync">
+        <Icon Name="@(CategoryId != null ? "folder" : "search")" Size="20" />
+        <span class="picker-value @(Chosen == null ? "muted" : null)">@(Chosen ?? T("everyone"))</span>
+        <Icon Name="chevron" Size="16" Class="chev-down" />
+    </button>
+    @if (Chosen != null)
+    {
+        <button type="button" class="picker-clear" aria-label="@T("clearFilters")" @onclick="() => ChooseAsync(null, null)"><Icon Name="close" Size="18" /></button>
+    }
+</div>
+
+<Sheet Open="open" Title="@T("pickPerson")" OnClose="() => open = false">
+    <input @ref="searchBox" class="input" type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPh")" aria-label="@T("searchPh")" autocomplete="off" />
+    <div class="picker-list" role="listbox">
+        @if (query.Trim().Length == 0)
+        {
+            <button type="button" class="picker-item" role="option" aria-selected="@(Chosen == null ? "true" : "false")" @onclick="() => ChooseAsync(null, null)">
+                <span class="avatar avatar-40" aria-hidden="true"><Icon Name="people" Size="20" /></span>
+                <span class="picker-text"><b>@T("everyone")</b></span>
+            </button>
+        }
+
+        @if (Categories.Count > 0)
+        {
+            <p class="picker-group">@T("entitiesGroup")</p>
+            @foreach (PeopleCategory category in Categories)
+            {
+                string id = category.Id;
+                <button type="button" class="picker-item" role="option" aria-selected="@(CategoryId == id ? "true" : "false")" @onclick="() => ChooseAsync(null, id)">
+                    <span class="avatar avatar-40" aria-hidden="true"><Icon Name="folder" Size="20" /></span>
+                    <span class="picker-text"><b>@category.Name(Lang)</b><span>@T("peopleCount").Replace("{0}", Book.Contacts.Count(c => c.CategoryId == id).ToString(System.Globalization.CultureInfo.InvariantCulture))</span></span>
+                </button>
+            }
+        }
+
+        @if (People.Count > 0)
+        {
+            <p class="picker-group">@T("peopleGroup")</p>
+            @foreach (Contact contact in People)
+            {
+                string id = contact.Id;
+                <button type="button" class="picker-item" role="option" aria-selected="@(ContactId == id ? "true" : "false")" @onclick="() => ChooseAsync(id, null)">
+                    <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(contact.Name)</span>
+                    <span class="picker-text"><b>@contact.Name</b><span>@Books.PeopleCategoryName(contact.CategoryId)@(contact.Phone.Length > 0 ? " · " : string.Empty)<span class="ltr">@contact.Phone</span></span></span>
+                </button>
+            }
+        }
+
+        @if (Categories.Count == 0 && People.Count == 0)
+        {
+            <p class="empty">@T("noMatches")</p>
+        }
+    </div>
+</Sheet>
+
+@code {
+    private bool open;
+    private bool focusPending;
+    private string query = string.Empty;
+    private ElementReference searchBox;
+
+    [Parameter]
+    public string? ContactId { get; set; }
+
+    [Parameter]
+    public string? CategoryId { get; set; }
+
+    /// <summary>Raised with the new choice: a contact, an entity, or neither (everyone).</summary>
+    [Parameter]
+    public EventCallback<(string? ContactId, string? CategoryId)> OnChange { get; set; }
+
+    private string? Chosen => ContactId != null ? Books.ContactName(ContactId) : CategoryId != null ? Books.PeopleCategoryName(CategoryId) : null;
+
+    private string Query => query.Trim();
+
+    private bool Matches(string? text) => Query.Length == 0 || (text ?? string.Empty).Contains(Query, StringComparison.CurrentCultureIgnoreCase);
+
+    private List<PeopleCategory> Categories => Book.PeopleCategories.Where(c => Matches(c.Name(Lang))).ToList();
+
+    private List<Contact> People => Book.Contacts
+        .Where(c => Matches(c.Name) || Matches(c.Phone) || (Query.Length > 0 && Matches(Books.PeopleCategoryName(c.CategoryId))))
+        .OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
+
+    private void OpenAsync()
+    {
+        query = string.Empty;
+        open = true;
+        focusPending = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusPending && open)
+        {
+            focusPending = false;
+            try
+            {
+                await searchBox.FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // The sheet closed before it rendered.
+            }
+        }
+    }
+
+    private async Task ChooseAsync(string? contactId, string? categoryId)
+    {
+        open = false;
+        await OnChange.InvokeAsync((contactId, categoryId));
+    }
+}
