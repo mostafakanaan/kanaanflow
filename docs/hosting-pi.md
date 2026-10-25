@@ -59,7 +59,51 @@ Open `https://flow.<your-domain>`:
 
 After a deploy, an installed app picks up the new version the next time it is fully closed and reopened.
 
-## Data on the Pi
+## Team sync and the database
 
-Nothing is stored on the Pi yet: each device keeps its own copy of the book in the browser. Sync
-(currently Supabase, see `sync-supabase.sql`) is what shares it between devices and acts as the backup.
+Every deploy also starts two Docker containers (`deploy/docker-compose.yml`):
+
+- **kanaanflow-db**: PostgreSQL 17. Only reachable inside Docker; its data lives in the `kanaanflow_pgdata` volume.
+- **kanaanflow-sync**: the sync API (`KanaanFlow.Sync`) on `127.0.0.1:8082`, which nginx serves at `/api/`.
+
+The first deploy installs Docker if it's missing and creates a random database password in
+`/etc/kanaanflow/db.env`. It stays on the Pi; never delete that file, or the database can't be opened.
+
+### Database design
+
+| Table | What it holds |
+|---|---|
+| `members` | Team members: name, role (Owner / Staff / Viewer), password hash (PBKDF2), active flag. |
+| `sessions` | Sign-in tokens (stored only as SHA-256 hashes), one per signed-in device, 180 days sliding. |
+| `events` | The append-only log: `seq` (server order), `id` (from the device, so re-sending is harmless), `member_id` (who uploaded it), `device_id`, `at`, `kind`, `payload` (the change as JSON). Rows are never updated or deleted. |
+
+Devices upload their new events and download everything after the last `seq` they have. Every upload is
+checked against the member's role: View only can't upload, Staff can't change categories, opening balances or
+undo other people's entries, and team changes only happen through the server.
+
+### First time
+
+1. On your phone, open the app, then **More › Sync › Create the team book**. Choose a password. Everything
+   already on that device is uploaded, and you become the owner.
+2. Under **More › Team**, add each member with a name, role and password, and give them both.
+3. They open the app and choose **Team book › Sign in**.
+
+### Backups
+
+`kanaanflow-backup.timer` runs `pg_dump` every night at 03:30 into `/var/backups/kanaanflow/`, keeping 14 days.
+Run one now with `sudo kanaanflow-backup`. Copying that folder somewhere else (another disk, cloud storage)
+protects against losing the Pi itself. Every signed-in phone also keeps a full copy of the book.
+
+Restore a backup:
+
+```bash
+sudo docker exec -i kanaanflow-db pg_restore -U kanaanflow -d kanaanflow --clean < /var/backups/kanaanflow/kanaanflow-YYYY-MM-DD.dump
+```
+
+### Useful commands
+
+```bash
+sudo docker compose -p kanaanflow ps          # are both containers up?
+sudo docker logs kanaanflow-sync --tail 50    # sync service log
+curl http://127.0.0.1:8082/api/health         # {"status":"ok"}
+```

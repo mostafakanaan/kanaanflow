@@ -182,6 +182,32 @@ public sealed class BookService
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Removes events from this device that will never be synced: ones the server refused, or local changes
+    /// the person chose not to upload. Only unsynced events can be dropped.
+    /// </summary>
+    public async Task DropUnsyncedAsync(IReadOnlyList<string> ids)
+    {
+        List<string> drop = ids.Where(unsynced.Contains).ToList();
+        if (drop.Count == 0)
+        {
+            return;
+        }
+
+        await store.DeleteEventsAsync(drop);
+        foreach (string id in drop)
+        {
+            events.Remove(id);
+            unsynced.Remove(id);
+        }
+
+        Rebuild();
+        Changed?.Invoke();
+    }
+
+    /// <summary>Unsynced changes that would add to a shared book (team changes are managed by the server).</summary>
+    public int PendingBookChanges => unsynced.Count(id => events[id].Change is not MemberSaved and not MemberRemoved);
+
     public async Task SaveSettingsAsync()
     {
         await store.SetMetaAsync(SettingsKey, JsonSerializer.Serialize(Settings, WebJsonContext.Default.DeviceSettings));

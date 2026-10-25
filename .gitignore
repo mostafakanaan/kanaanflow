@@ -107,3 +107,6 @@ logs/
 *.tmp
 *.temp
 /LicenseGenerator/private-key.xml
+
+# Sync service build output (published by the deploy workflow)
+deploy/sync/app/

@@ -37,6 +37,7 @@ window.kf = (() => {
         // ---- storage ----
         getEvents: () => run('events', 'readonly', s => s.getAll()),
         putEvents: rows => run('events', 'readwrite', s => { rows.forEach(r => s.put(r)); }),
+        deleteEvents: ids => run('events', 'readwrite', s => { ids.forEach(id => s.delete(id)); }),
         markSynced: async ids => {
             const db = await openDb();
             return new Promise((resolve, reject) => {

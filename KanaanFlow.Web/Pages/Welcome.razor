@@ -2,6 +2,7 @@
 @layout FlowLayout
 @inherits KfComponent
 @inject SyncService Sync
+@inject ApiClient Api
 
 <PageTitle>KanaanFlow</PageTitle>
 <div class="welcome">
@@ -14,47 +15,57 @@
         <button type="button" class="sel tile" aria-pressed="@(Lang == "en" ? "true" : "false")" @onclick='() => SetLanguage("en")'>English</button>
     </div>
 
+    @if (teamBookExists)
+    {
+        <div class="grid-2" role="group">
+            <button type="button" class="sel tile" aria-pressed="@(joining ? "true" : "false")" @onclick="() => joining = true">@T("joinTeam")</button>
+            <button type="button" class="sel tile" aria-pressed="@(!joining ? "true" : "false")" @onclick="() => joining = false">@T("newBook")</button>
+        </div>
+    }
+
     <label class="field">@T("yourName")
-        <input class="input" type="text" @bind="name" @bind:event="oninput" placeholder="@T("yourNamePh")" autocomplete="name" />
+        <input class="input" type="text" @bind="name" @bind:event="oninput" placeholder="@T("yourNamePh")" autocomplete="username" />
     </label>
 
-    <button type="button" class="sel tile" aria-pressed="@(joining ? "true" : "false")" @onclick="() => joining = !joining">@T("syncSetup")</button>
     @if (joining)
     {
-        <p class="muted small">@T("bookCodeHint")</p>
-        <label class="field">@T("syncUrl")
-            <input class="input ltr" type="url" @bind="syncUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" />
-        </label>
-        <label class="field">@T("syncKey")
-            <input class="input ltr" type="text" @bind="syncKey" autocomplete="off" />
-        </label>
-        <label class="field">@T("bookCode")
-            <input class="input ltr" type="text" @bind="bookCode" autocomplete="off" />
+        <label class="field">@T("password")
+            <input class="input" type="password" @bind="password" autocomplete="current-password" />
         </label>
     }
-    else
+    else if (!teamBookExists)
     {
         <p class="muted small">@T("joinHint")</p>
     }
 
-    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@busy" @onclick="StartAsync">@T("start")</button>
+    @if (error.Length > 0)
+    {
+        <p class="err-text" style="text-align:start" role="alert">@error</p>
+    }
+
+    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@busy" @onclick="StartAsync">@(joining ? T("signIn") : T("start"))</button>
 </div>
 
 @code {
     private string name = string.Empty;
+    private string password = string.Empty;
+    private string error = string.Empty;
     private bool joining;
+    private bool teamBookExists;
     private bool busy;
-    private string syncUrl = string.Empty;
-    private string syncKey = string.Empty;
-    private string bookCode = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
         if (Books.Settings.SetupDone)
         {
             Nav.NavigateTo("", replace: true);
+            return;
         }
+
+        // When this address has a team book, joining it is the likely choice.
+        teamBookExists = await Api.IsReadyAsync() == true;
+        joining = teamBookExists;
     }
 
     private async Task SetLanguage(string language)
@@ -66,36 +77,36 @@
     private async Task StartAsync()
     {
         busy = true;
-        string trimmed = name.Trim();
-        bool joined = false;
-        if (joining && syncUrl.Trim().Length > 0 && syncKey.Trim().Length > 0 && bookCode.Trim().Length > 0)
+        error = string.Empty;
+        try
         {
-            await Sync.ConfigureAsync(syncUrl, syncKey, bookCode);
-            joined = Book.Members.Count > 0;
-        }
-
-        TeamMember? existing = trimmed.Length == 0
-            ? null
-            : Book.Members.FirstOrDefault(m => string.Equals(m.Name.Trim(), trimmed, StringComparison.OrdinalIgnoreCase));
-
-        if (existing != null)
-        {
-            Books.Settings.MemberId = existing.Id;
-        }
-        else
-        {
-            TeamMember me = new TeamMember
+            if (joining)
             {
-                Id = BookService.NewId(),
-                Name = trimmed,
-                Role = joined ? TeamRole.Staff : TeamRole.Owner
-            };
-            Books.Settings.MemberId = me.Id;
-            await Books.RecordAsync(new MemberSaved { Member = me });
-        }
+                await Sync.SignInAsync(name.Trim(), password);
+            }
+            else
+            {
+                TeamMember me = new TeamMember { Id = BookService.NewId(), Name = name.Trim(), Role = TeamRole.Owner };
+                Books.Settings.MemberId = me.Id;
+                await Books.RecordAsync(new MemberSaved { Member = me });
+            }
 
-        Books.Settings.SetupDone = true;
-        await Books.SaveSettingsAsync();
-        Nav.NavigateTo("", replace: true);
+            Books.Settings.SetupDone = true;
+            await Books.SaveSettingsAsync();
+            Nav.NavigateTo("", replace: true);
+        }
+        catch (ApiException ex)
+        {
+            string key = "err-" + ex.Code;
+            error = T(key) == key ? T("err-server-error") : T(key);
+        }
+        catch (HttpRequestException)
+        {
+            error = T("noConnection");
+        }
+        finally
+        {
+            busy = false;
+        }
     }
 }

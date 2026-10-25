@@ -5,9 +5,9 @@ for small businesses.
 
 It helps track income, expenses, loans, and receivables and generates
 daily financial reports (PDF and Excel).  
-The app syncs data to a central cloud store when a connection is available.
+The app syncs data to the team's own server (a Raspberry Pi) when a connection is available.
 
-Built with .NET (Blazor WebAssembly PWA and MAUI), EF Core, SQLite, and Supabase.
+Built with .NET (Blazor WebAssembly PWA, ASP.NET Core and MAUI), PostgreSQL, EF Core and SQLite.
 
 ## The app (KanaanFlow.Web)
 
@@ -20,9 +20,9 @@ Arabic first (right-to-left), English one tap away.
 - **Exchange** between SYP, USD, EUR and TRY at a typed or fetched rate; each currency keeps its own balance.
 - **Reports** for a day or date range, filtered by people category, entry type or person; export PDF (print) or Excel.
 - **Offline first**: everything is stored on the device (IndexedDB) and works with no internet.
-- **Sync** (optional): devices share an append-only event log through Supabase, so entries are never overwritten.
-  Run [`docs/sync-supabase.sql`](docs/sync-supabase.sql) once, then enter the project URL, anon key and a
-  shared book code under *More › Sync*.
+- **Team sync**: devices share an append-only event log through the KanaanFlow sync service (ASP.NET Core +
+  PostgreSQL on the Pi), so entries are never overwritten. Each team member signs in with a name and password,
+  and the server enforces their role (Owner, Staff, View only). See [`docs/hosting-pi.md`](docs/hosting-pi.md).
 
 Run locally:
 
@@ -49,7 +49,7 @@ between UI, domain logic, persistence, and synchronization.
 
 ├─ Blazor WebAssembly PWA (phone, tablet, desktop)
 
-├─ IndexedDB local store, Supabase sync
+├─ IndexedDB local store, team sync client
 
 └─ Excel / PDF export
 
@@ -89,7 +89,9 @@ between UI, domain logic, persistence, and synchronization.
 
  ├─ Sync Services
 
- ├─ Supabase Integration
+ ├─ ASP.NET Core sync API (sign-in, roles, event log)
+
+ ├─ PostgreSQL (Docker on the Pi)
 
  └─ Conflict Resolution
 

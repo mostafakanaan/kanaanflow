@@ -20,17 +20,13 @@ public sealed class DeviceSettings
 
     public string LastCurrency { get; set; } = "USD";
 
-    public string SyncUrl { get; set; } = string.Empty;
-
-    public string SyncKey { get; set; } = string.Empty;
-
-    public string BookCode { get; set; } = string.Empty;
+    /// <summary>The sync server session, empty when this device isn't signed in.</summary>
+    public string Token { get; set; } = string.Empty;
 
     /// <summary>Highest server sequence number already pulled.</summary>
     public long PulledSeq { get; set; }
 
     public DateTime? LastSyncUtc { get; set; }
 
-    public bool SyncConfigured =>
-        !string.IsNullOrWhiteSpace(SyncUrl) && !string.IsNullOrWhiteSpace(SyncKey) && !string.IsNullOrWhiteSpace(BookCode);
+    public bool SignedIn => !string.IsNullOrEmpty(Token);
 }

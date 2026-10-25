@@ -1,0 +1,217 @@
+@inherits KfComponent
+@inject SyncService Sync
+@inject ApiClient Api
+
+@* The team. Signed in, the server manages members and their passwords; on a device-only book it is just a list. *@
+<section class="card card-pad" style="gap:6px">
+    <h2 class="h3" style="margin-bottom:4px">@T("team")</h2>
+
+    @if (ServerManaged)
+    {
+        @foreach (ApiMember member in members.Where(m => m.Active))
+        {
+            ApiMember m = member;
+            bool isMe = m.Id == Books.Settings.MemberId;
+            <div class="member" style="flex-wrap:wrap">
+                <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(m.Name)</span>
+                <span class="nm">@m.Name@(isMe ? " (" + T("you") + ")" : string.Empty)</span>
+                @if (isMe)
+                {
+                    <span class="role @RoleClass(m.Role)">@RoleName(m.Role)</span>
+                }
+                else
+                {
+                    <select class="kind" style="height:44px;border-radius:10px;border:2px solid var(--field);background:#fff;font-size:15px" aria-label="@T("role") · @m.Name" value="@m.Role" @onchange="e => SetRoleAsync(m, e.Value?.ToString())">
+                        <option value="@TeamRole.Owner">@T("roleOwner")</option>
+                        <option value="@TeamRole.Staff">@T("roleStaff")</option>
+                        <option value="@TeamRole.Viewer">@T("roleViewer")</option>
+                    </select>
+                    <button type="button" class="link-btn" style="font-size:15px" aria-expanded="@(resetting == m.Id ? "true" : "false")" @onclick="() => ToggleReset(m.Id)">@T("resetPassword")</button>
+                    <button type="button" class="icon-btn" aria-label="@T("removeMember") @m.Name" @onclick="() => RemoveAsync(m)"><Icon Name="trash" Size="22" /></button>
+                }
+            </div>
+            @if (resetting == m.Id)
+            {
+                <div style="display:flex;gap:8px">
+                    <input class="input" style="height:52px;font-size:17px" type="text" @bind="resetValue" placeholder="@T("newPassword")" aria-label="@T("newPassword") · @m.Name" autocomplete="off" />
+                    <button type="button" class="btn btn-primary" @onclick="() => ResetAsync(m)">@T("save")</button>
+                </div>
+            }
+        }
+
+        <p class="muted small" style="margin-top:8px">@T("inviteHint")</p>
+        <input class="input" style="height:52px;font-size:17px" type="text" @bind="newName" placeholder="@T("memberName")" aria-label="@T("memberName")" />
+        <div style="display:flex;gap:8px">
+            <select class="select" style="height:52px;font-size:16px;flex:1" aria-label="@T("role")" @bind="newRole">
+                <option value="@TeamRole.Staff">@T("roleStaff")</option>
+                <option value="@TeamRole.Viewer">@T("roleViewer")</option>
+                <option value="@TeamRole.Owner">@T("roleOwner")</option>
+            </select>
+            <input class="input" style="height:52px;font-size:17px;flex:1" type="text" @bind="newPassword" placeholder="@T("password")" aria-label="@T("password")" autocomplete="off" />
+        </div>
+        <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddAsync">@T("invite")</button>
+    }
+    else
+    {
+        @foreach (TeamMember member in Book.Members)
+        {
+            TeamMember m = member;
+            bool isMe = m.Id == Books.Settings.MemberId;
+            <div class="member">
+                <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(m.Name)</span>
+                <span class="nm">@(m.Name.Length > 0 ? m.Name : "—")@(isMe ? " (" + T("you") + ")" : string.Empty)</span>
+                <span class="role @RoleClass(m.Role)">@RoleName(m.Role)</span>
+            </div>
+        }
+
+        @if (Books.Settings.SignedIn)
+        {
+            <p class="muted small">@T("teamFromServer")</p>
+        }
+        else
+        {
+            <p class="muted small">@T("teamNeedsSync")</p>
+        }
+    }
+
+    @if (error.Length > 0)
+    {
+        <p class="err-text" style="text-align:start" role="alert">@error</p>
+    }
+</section>
+
+@code {
+    private List<ApiMember> members = new List<ApiMember>();
+    private bool loaded;
+    private string? loadedFor;
+    private bool busy;
+    private string newName = string.Empty;
+    private string newPassword = string.Empty;
+    private TeamRole newRole = TeamRole.Staff;
+    private string? resetting;
+    private string resetValue = string.Empty;
+    private string error = string.Empty;
+
+    /// <summary>Owners manage the team on the server once signed in and the member list has loaded.</summary>
+    private bool ServerManaged => Books.Settings.SignedIn && Books.CanManage && loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Signing in on this page: load the team once for the new session.
+        if (Books.Settings.SignedIn && Books.CanManage && loadedFor != Books.Settings.Token)
+        {
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        loadedFor = Books.Settings.Token;
+        if (!Books.Settings.SignedIn || !Books.CanManage)
+        {
+            loaded = false;
+            return;
+        }
+
+        try
+        {
+            members = await Api.MembersAsync();
+            loaded = true;
+        }
+        catch (Exception ex) when (ex is ApiException || ex is HttpRequestException)
+        {
+            loaded = false;
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        busy = true;
+        error = string.Empty;
+        try
+        {
+            await action();
+            members = await Api.MembersAsync();
+            await Sync.SyncNowAsync();
+        }
+        catch (ApiException ex)
+        {
+            string key = "err-" + ex.Code;
+            error = T(key) == key ? T("err-server-error") : T(key);
+        }
+        catch (HttpRequestException)
+        {
+            error = T("noConnection");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private Task AddAsync() => RunAsync(async () =>
+    {
+        string name = newName.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Api.CreateMemberAsync(name, newRole, newPassword);
+        Toasts.Show(T("saved") + " · " + name);
+        newName = newPassword = string.Empty;
+    });
+
+    private Task SetRoleAsync(ApiMember member, string? value)
+    {
+        if (!Enum.TryParse(value, out TeamRole role) || role == member.Role)
+        {
+            return Task.CompletedTask;
+        }
+
+        return RunAsync(() => Api.UpdateMemberAsync(member.Id, role: role));
+    }
+
+    private void ToggleReset(string id)
+    {
+        resetting = resetting == id ? null : id;
+        resetValue = string.Empty;
+    }
+
+    private Task ResetAsync(ApiMember member) => RunAsync(async () =>
+    {
+        await Api.UpdateMemberAsync(member.Id, password: resetValue);
+        resetting = null;
+        resetValue = string.Empty;
+        Toasts.Show(T("saved") + " · " + member.Name);
+    });
+
+    private Task RemoveAsync(ApiMember member) => RunAsync(async () =>
+    {
+        await Api.UpdateMemberAsync(member.Id, active: false);
+        Toasts.Show(
+            T("deleteDone") + " · " + member.Name,
+            undo: () => RunAsync(() => Api.UpdateMemberAsync(member.Id, active: true)));
+    });
+
+    private string RoleName(TeamRole role) => role switch
+    {
+        TeamRole.Owner => T("roleOwner"),
+        TeamRole.Staff => T("roleStaff"),
+        _ => T("roleViewer")
+    };
+
+    private static string RoleClass(TeamRole role) => role switch
+    {
+        TeamRole.Owner => "owner",
+        TeamRole.Viewer => "viewer",
+        _ => string.Empty
+    };
+}

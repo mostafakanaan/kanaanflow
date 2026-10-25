@@ -24,6 +24,8 @@ public sealed class LocalStore
 
     public ValueTask PutEventsAsync(IReadOnlyList<StoredEvent> rows) => js.InvokeVoidAsync("kf.putEvents", rows);
 
+    public ValueTask DeleteEventsAsync(IReadOnlyList<string> ids) => js.InvokeVoidAsync("kf.deleteEvents", ids);
+
     public ValueTask MarkSyncedAsync(IReadOnlyList<string> ids) => js.InvokeVoidAsync("kf.markSynced", ids);
 
     public ValueTask<string?> GetMetaAsync(string key) => js.InvokeAsync<string?>("kf.getMeta", key);
