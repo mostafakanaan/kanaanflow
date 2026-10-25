@@ -77,6 +77,14 @@ public sealed class ApiClient
         return ReadSession(body);
     }
 
+    /// <summary>Sets a new password for a forgotten one (needs the master password) and signs in.</summary>
+    public async Task<ApiSession> ResetPasswordAsync(string name, string masterPassword, string newPassword)
+    {
+        JsonObject request = new JsonObject { ["name"] = name, ["masterPassword"] = masterPassword, ["newPassword"] = newPassword };
+        JsonNode? body = await SendAsync(HttpMethod.Post, "reset-password", request, authorized: false);
+        return ReadSession(body);
+    }
+
     public Task LogoutAsync() => SendAsync(HttpMethod.Post, "logout", null, authorized: true);
 
     public Task ChangePasswordAsync(string current, string next) =>

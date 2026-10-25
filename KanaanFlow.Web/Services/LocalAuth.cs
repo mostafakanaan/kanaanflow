@@ -88,6 +88,32 @@ public sealed class LocalAuth
         return null;
     }
 
+    /// <summary>Sets a new password for a forgotten one (needs the master password) and logs in. Returns an error code, or null.</summary>
+    public async Task<string?> ResetPasswordAsync(string name, string newPassword, string masterPassword)
+    {
+        if (!FixedEquals(masterPassword, MasterPassword))
+        {
+            return "wrong-master-password";
+        }
+
+        if (newPassword.Length < MinPasswordLength)
+        {
+            return "password-too-short";
+        }
+
+        LocalAccount? account = book.Settings.LocalAccounts.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (account == null)
+        {
+            return "wrong-name-or-password";
+        }
+
+        account.Salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+        account.Hash = Hash(newPassword, account.Salt);
+        TeamRole role = book.Book.FindMember(account.MemberId)?.Role ?? TeamRole.Admin;
+        await book.LogInAsync(account.MemberId, role, localOnly: true);
+        return null;
+    }
+
     /// <summary>Changes the logged-in device-only user's password. Returns false when the current one is wrong.</summary>
     public async Task<bool> ChangePasswordAsync(string current, string next)
     {

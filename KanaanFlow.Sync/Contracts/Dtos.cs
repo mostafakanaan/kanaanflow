@@ -11,6 +11,8 @@ public sealed record RegisterRequest(string Name, string Password, string Master
 
 public sealed record LoginRequest(string Name, string Password);
 
+public sealed record ResetPasswordRequest(string Name, string MasterPassword, string NewPassword);
+
 public sealed record SessionResponse(string Token, MemberDto Member);
 
 public sealed record CreateMemberRequest(string Name, string Role, string Password);

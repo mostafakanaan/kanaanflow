@@ -29,8 +29,8 @@
     <p>@T("welcomeText")</p>
 
     <div class="grid-2" role="group">
-        <button type="button" class="sel tile" aria-pressed="@(!creating ? "true" : "false")" @onclick="() => Switch(false)"><Icon Name="user" Size="20" />&nbsp;@T("signIn")</button>
-        <button type="button" class="sel tile" aria-pressed="@(creating ? "true" : "false")" @onclick="() => Switch(true)"><Icon Name="plus" Size="20" />&nbsp;@T("createUser")</button>
+        <button type="button" class="sel tile" aria-pressed="@(!creating ? "true" : "false")" @onclick="() => Switch(false, false)"><Icon Name="user" Size="20" />&nbsp;@T("signIn")</button>
+        <button type="button" class="sel tile" aria-pressed="@(creating ? "true" : "false")" @onclick="() => Switch(true, false)"><Icon Name="plus" Size="20" />&nbsp;@T("createUser")</button>
     </div>
 
     @if (serverReady == null && checkedServer)
@@ -38,14 +38,19 @@
         <p class="notice">@T("noServerLocal")</p>
     }
 
+    @if (resetting)
+    {
+        <p class="notice">@T("resetPasswordHint")</p>
+    }
+
     <label class="field">@T("yourName")
         <input class="input" type="text" @bind="name" @bind:event="oninput" placeholder="@T("yourNamePh")" autocomplete="username" />
     </label>
-    <label class="field">@T("password")
-        <input class="input" type="password" @bind="password" autocomplete="@(creating ? "new-password" : "current-password")" />
+    <label class="field">@(resetting ? T("newPassword") : T("password"))
+        <input class="input" type="password" @bind="password" autocomplete="@(creating || resetting ? "new-password" : "current-password")" />
     </label>
 
-    @if (creating)
+    @if (creating || resetting)
     {
         <label class="field">@T("repeatPassword")
             <input class="input" type="password" @bind="repeat" autocomplete="new-password" />
@@ -53,7 +58,14 @@
         <label class="field">@T("masterPassword")
             <input class="input" type="password" @bind="master" autocomplete="off" />
         </label>
-        <p class="muted small">@T("createUserHint")</p>
+        @if (creating)
+        {
+            <p class="muted small">@T("createUserHint")</p>
+        }
+    }
+    else
+    {
+        <button type="button" class="link-btn" style="align-self:flex-start;margin-top:-12px" @onclick="() => Switch(false, true)">@T("forgotPassword")</button>
     }
 
     @if (error.Length > 0)
@@ -61,7 +73,12 @@
         <p class="err-text" style="text-align:start" role="alert">@error</p>
     }
 
-    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@(busy || !checkedServer)" @onclick="StartAsync">@(creating ? T("createUser") : T("signIn"))</button>
+    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@(busy || !checkedServer)" @onclick="StartAsync">@(creating ? T("createUser") : resetting ? T("resetPasswordTitle") : T("signIn"))</button>
+
+    @if (resetting)
+    {
+        <button type="button" class="link-btn" style="align-self:center" @onclick="() => Switch(false, false)">@T("cancel")</button>
+    }
 </div>
 
 @code {
@@ -71,6 +88,7 @@
     private string master = string.Empty;
     private string error = string.Empty;
     private bool creating;
+    private bool resetting;
     private bool checkedServer;
     private bool? serverReady;
     private bool busy;
@@ -95,9 +113,10 @@
         checkedServer = true;
     }
 
-    private void Switch(bool create)
+    private void Switch(bool create, bool reset)
     {
         creating = create;
+        resetting = reset;
         error = string.Empty;
     }
 
@@ -115,7 +134,7 @@
         string trimmed = name.Trim();
         try
         {
-            if (creating && password != repeat)
+            if ((creating || resetting) && password != repeat)
             {
                 error = T("passwordsDiffer");
                 return;
@@ -128,6 +147,10 @@
                 {
                     await Sync.RegisterAsync(trimmed, password, master);
                 }
+                else if (resetting)
+                {
+                    await Sync.ResetPasswordAsync(trimmed, master, password);
+                }
                 else
                 {
                     await Sync.SignInAsync(trimmed, password);
@@ -135,7 +158,11 @@
             }
             else
             {
-                failure = creating ? await Local.RegisterAsync(trimmed, password, master) : await Local.SignInAsync(trimmed, password);
+                failure = creating
+                    ? await Local.RegisterAsync(trimmed, password, master)
+                    : resetting
+                    ? await Local.ResetPasswordAsync(trimmed, password, master)
+                    : await Local.SignInAsync(trimmed, password);
             }
 
             if (failure != null)
@@ -145,7 +172,7 @@
             }
 
             password = repeat = master = string.Empty;
-            Toasts.Show(creating ? T("userCreated") : T("signedIn"));
+            Toasts.Show(creating ? T("userCreated") : resetting ? T("passwordReset") : T("signedIn"));
             Nav.NavigateTo("", replace: true);
         }
         catch (ApiException ex)

@@ -80,6 +80,24 @@ api.MapPost("/login", async (LoginRequest request, SyncStore store) =>
     return session == null ? Error("wrong-name-or-password", StatusCodes.Status401Unauthorized) : Results.Ok(session);
 }).RequireRateLimiting("signin");
 
+// Forgotten password: the master password lets the person set a new one. Signs them out on their other devices.
+api.MapPost("/reset-password", async (ResetPasswordRequest request, SyncStore store) =>
+{
+    if (!SameText(request.MasterPassword, masterPassword))
+    {
+        return Error("wrong-master-password", StatusCodes.Status403Forbidden);
+    }
+
+    string? problem = CheckPassword(request.NewPassword);
+    if (problem != null)
+    {
+        return Error(problem);
+    }
+
+    SessionResponse? session = await store.ResetPasswordByNameAsync(request.Name ?? string.Empty, request.NewPassword);
+    return session == null ? Error("wrong-name-or-password", StatusCodes.Status401Unauthorized) : Results.Ok(session);
+}).RequireRateLimiting("signin");
+
 api.MapPost("/logout", async (HttpContext context, SyncStore store) =>
 {
     string? token = BearerToken(context);

@@ -355,6 +355,10 @@ public static class Strings
         ["peopleCount"] = "عدد الأشخاص: {0}",
         ["groupsN"] = "{0} فئات",
         ["saveFailed"] = "تعذّر حفظ الملف",
+        ["forgotPassword"] = "نسيت كلمة المرور؟",
+        ["resetPasswordTitle"] = "تعيين كلمة مرور جديدة",
+        ["resetPasswordHint"] = "اكتب اسمك وكلمة مرور جديدة. يحتاج ذلك كلمة المرور الرئيسية، وسيتم تسجيل خروجك من أجهزتك الأخرى.",
+        ["passwordReset"] = "تم تعيين كلمة المرور الجديدة",
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -684,5 +688,9 @@ public static class Strings
         ["peopleCount"] = "{0} people",
         ["groupsN"] = "{0} groups",
         ["saveFailed"] = "Could not save the file",
+        ["forgotPassword"] = "Forgot password?",
+        ["resetPasswordTitle"] = "Set a new password",
+        ["resetPasswordHint"] = "Type your name and a new password. This needs the master password, and signs you out on your other devices.",
+        ["passwordReset"] = "New password set",
     };
 }
