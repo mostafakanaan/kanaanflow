@@ -30,7 +30,8 @@ Run locally:
 dotnet run --project KanaanFlow.Web
 ```
 
-Deploy: enable GitHub Pages (Source: GitHub Actions) and run the **deploy-pwa** workflow.
+Deploy: self-hosted on a Raspberry Pi behind a Cloudflare Tunnel; every push to `main` builds and deploys it
+(see [`docs/hosting-pi.md`](docs/hosting-pi.md) for the one-time setup).
 On a phone, open the site and choose *Install app* (Android/Windows) or *Share › Add to Home Screen* (iPhone).
 
 ⚠️ Source-available. Commercial use requires permission.
