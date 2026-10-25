@@ -76,6 +76,15 @@ jobs:
       - name: Install nginx site
         run: sudo install -m 644 deploy/nginx/kanaanflow.conf /etc/nginx/conf.d/kanaanflow.conf
 
+      - name: Check the port is free for nginx
+        # Port 8081 was taken by another service on this Pi (llama-server); fail clearly if 18081 ever is too.
+        run: |
+          holder="$(sudo ss -ltnpH 'sport = :18081' | grep -v nginx || true)"
+          if [ -n "$holder" ]; then
+            echo "::error::Port 18081 is used by another program, so nginx can't serve KanaanFlow on it: $holder"
+            exit 1
+          fi
+
       - name: Reload Nginx
         run: |
           sudo nginx -t
@@ -92,19 +101,19 @@ jobs:
         run: |
           # nginx reloads in the background, so give it a few seconds.
           for i in $(seq 1 10); do
-            if curl -fsS -o /dev/null http://127.0.0.1:8081/ \
-              && curl -fsS -o /dev/null http://127.0.0.1:8081/people \
-              && curl -fsS -o /dev/null http://127.0.0.1:8081/service-worker.js \
-              && curl -fsS -o /dev/null http://127.0.0.1:8081/api/health; then
-              echo "KanaanFlow and its sync service are served on 127.0.0.1:8081"
+            if curl -fsS -o /dev/null http://127.0.0.1:18081/ \
+              && curl -fsS -o /dev/null http://127.0.0.1:18081/people \
+              && curl -fsS -o /dev/null http://127.0.0.1:18081/service-worker.js \
+              && curl -fsS -o /dev/null http://127.0.0.1:18081/api/health; then
+              echo "KanaanFlow and its sync service are served on 127.0.0.1:18081"
               exit 0
             fi
             sleep 1
           done
           echo "::group::Diagnostics"
-          curl -sS -i http://127.0.0.1:8081/ | head -15 || true
-          curl -sS -i http://127.0.0.1:8081/api/health | head -15 || true
-          echo "--- listening on 8081:"; sudo ss -ltnp | grep ':8081' || echo "nothing"
+          curl -sS -i http://127.0.0.1:18081/ | head -15 || true
+          curl -sS -i http://127.0.0.1:18081/api/health | head -15 || true
+          echo "--- listening on 18081:"; sudo ss -ltnp | grep ':18081' || echo "nothing"
           echo "--- nginx includes:"; grep -n "include" /etc/nginx/nginx.conf || true
           echo "--- web root:"; sudo ls -la /var/www/kanaanflow | head -8
           echo "--- nginx error log:"; sudo tail -n 20 /var/log/nginx/error.log || true
