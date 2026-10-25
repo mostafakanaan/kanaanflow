@@ -89,22 +89,22 @@ for candidate in /etc/cloudflared/config.yml "${HOME}/.cloudflared/config.yml"; 
 done
 
 if [ -z "$HOSTNAME_PUBLIC" ]; then
-    echo "No --hostname given. Add a public hostname to your tunnel: <host> -> http://localhost:8081"
+    echo "No --hostname given. Add a public hostname to your tunnel: <host> -> http://localhost:18081"
 elif [ -z "$config" ]; then
     echo "Your tunnel is managed in the Cloudflare dashboard. Add it there:"
     echo "  Zero Trust › Networks › Tunnels › your tunnel › Public hostname › Add"
-    echo "  ${HOSTNAME_PUBLIC}  ->  HTTP  localhost:8081"
+    echo "  ${HOSTNAME_PUBLIC}  ->  HTTP  localhost:18081"
 elif sudo grep -q "hostname: *${HOSTNAME_PUBLIC}" "$config"; then
     echo "${HOSTNAME_PUBLIC} is already in ${config}"
 else
     if ! sudo grep -q "service: *http_status:404" "$config"; then
         warn "Couldn't find the catch-all rule in ${config}. Add this under 'ingress:' yourself:"
         warn "  - hostname: ${HOSTNAME_PUBLIC}"
-        warn "    service: http://localhost:8081"
+        warn "    service: http://localhost:18081"
     else
         sudo cp "$config" "${config}.bak.$(date +%Y%m%d%H%M%S)"
         indent="$(sudo grep -m1 "service: *http_status:404" "$config" | sed 's/^\( *\).*/\1/')"
-        sudo sed -i "0,/^${indent}- service: *http_status:404/s||${indent}- hostname: ${HOSTNAME_PUBLIC}\n${indent}  service: http://localhost:8081\n&|" "$config"
+        sudo sed -i "0,/^${indent}- service: *http_status:404/s||${indent}- hostname: ${HOSTNAME_PUBLIC}\n${indent}  service: http://localhost:18081\n&|" "$config"
         echo "Added ${HOSTNAME_PUBLIC} to ${config} (backup saved next to it)."
         tunnel="$(sudo sed -n 's/^tunnel: *//p' "$config" | head -n1)"
         if [ -n "$tunnel" ] && command -v cloudflared >/dev/null; then
