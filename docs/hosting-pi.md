@@ -1,11 +1,12 @@
 # Hosting KanaanFlow on the Raspberry Pi
 
-The app is a set of static files. The Pi builds them, nginx serves them on `127.0.0.1:8081`, and the
+The app is a set of static files. The Pi builds them, nginx serves them on `127.0.0.1:18081`, and the
 Cloudflare Tunnel publishes them over HTTPS (installing the app and working offline both need HTTPS).
-It's the same setup as the portfolio, which keeps serving on its own port.
+It's the same setup as the portfolio, which keeps serving on its own port. (Port 8081 is taken on this Pi by
+`llama-server`, so KanaanFlow uses 18081.)
 
 ```
-phone ──https──▶ Cloudflare ──tunnel──▶ cloudflared (Pi) ──▶ nginx 127.0.0.1:8081 ──▶ /var/www/kanaanflow
+phone ──https──▶ Cloudflare ──tunnel──▶ cloudflared (Pi) ──▶ nginx 127.0.0.1:18081 ──▶ /var/www/kanaanflow
 ```
 
 ## One-time setup
@@ -35,12 +36,12 @@ Or step by step:
    installed by hand: `actions/setup-dotnet` installs it into the runner's tool cache.
 
 3. **Add a public hostname to the tunnel** in Cloudflare (*Zero Trust › Networks › Tunnels › your
-   tunnel › Public hostname*), for example `flow.<your-domain>` → `HTTP` → `localhost:8081`.
+   tunnel › Public hostname*), for example `flow.<your-domain>` → `HTTP` → `localhost:18081`.
    If the tunnel is configured from `config.yml` instead, add above the catch-all rule:
 
    ```yaml
    - hostname: flow.<your-domain>
-     service: http://localhost:8081
+     service: http://localhost:18081
    ```
 
    then restart cloudflared: `sudo systemctl restart cloudflared`.
