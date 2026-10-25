@@ -1,0 +1,22 @@
+@inherits KfComponent
+
+@* Paid / partly paid / unpaid, with an icon so color is never the only signal. *@
+<span class="salary-chip @Status.State.ToString().ToLowerInvariant()">
+    @switch (Status.State)
+    {
+        case SalaryState.Paid:
+            <Icon Name="check" Size="15" Stroke="2.8" /><span>@T("salaryPaid")</span>
+            break;
+        case SalaryState.Partial:
+            <Icon Name="clock" Size="15" Stroke="2.4" /><span class="ltr">@Fmt.Money(Status.Paid) / @Fmt.Money(Status.Due) @Sym(Status.Currency)</span>
+            break;
+        default:
+            <Icon Name="close" Size="15" Stroke="2.6" /><span>@T("salaryUnpaid")</span>
+            break;
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public SalaryMonthStatus Status { get; set; } = default!;
+}

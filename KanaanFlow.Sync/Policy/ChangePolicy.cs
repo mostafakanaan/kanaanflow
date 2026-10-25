@@ -44,6 +44,12 @@ public static class ChangePolicy
             return RoleRules.CanPurge(role) ? null : "admin-only";
         }
 
+        // Salaries are for Admins, Owners and Accountants only: setting them and paying them.
+        if (change is SalarySet || (change is EntryRecorded { Entry.SalaryMonth: not null }))
+        {
+            return RoleRules.CanManageBook(role) ? null : "salaries-managers-only";
+        }
+
         if (RoleRules.CanManageBook(role))
         {
             return null;

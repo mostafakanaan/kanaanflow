@@ -155,6 +155,14 @@ public static class Fmt
         return day + (en ? ", " : "، ") + date.Day.ToString(CultureInfo.InvariantCulture) + " " + month + " " + date.Year.ToString(CultureInfo.InvariantCulture);
     }
 
+    /// <summary>"تشرين الأول 2026" or "October 2026" for a yyyy-MM month.</summary>
+    public static string Month(string month, string language)
+    {
+        DateOnly first = SalaryMonths.First(month);
+        string name = (language == "en" ? Strings.MonthsEnLong : Strings.MonthsAr)[first.Month - 1];
+        return name + " " + first.Year.ToString(CultureInfo.InvariantCulture);
+    }
+
     public static string Iso(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     public static DateOnly? ParseIso(string? text)

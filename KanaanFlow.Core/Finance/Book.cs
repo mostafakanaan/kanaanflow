@@ -26,6 +26,9 @@ public sealed class Book
     public List<EntryCategory> EntryCategories { get; } = DefaultCategories.Entries();
 
     /// <summary>Everyone who has been on the team, including removed members (see <see cref="TeamMember.Active"/>).</summary>
+    /// <summary>Each employee's salary periods, oldest first.</summary>
+    public Dictionary<string, List<SalaryPeriod>> Salaries { get; } = new Dictionary<string, List<SalaryPeriod>>();
+
     public List<TeamMember> Members { get; } = new List<TeamMember>();
 
     public IEnumerable<TeamMember> ActiveMembers => Members.Where(m => m.Active);

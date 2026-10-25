@@ -19,6 +19,10 @@
             <dt>@T("personCol")</dt><dd>@Books.ContactName(Entry.ContactId)</dd>
         }
         <dt>@T("category")</dt><dd>@Books.EntryCategoryName(Entry.CategoryId)</dd>
+        @if (Entry.SalaryMonth != null)
+        {
+            <dt>@T("salary")</dt><dd>@Fmt.Month(Entry.SalaryMonth, Lang)</dd>
+        }
         <dt>@T("date")</dt><dd>@Books.DateText(Entry.Date)@(Entry.Time.Length > 0 ? " · " + Entry.Time : string.Empty)</dd>
         @if (Entry.Note.Length > 0)
         {

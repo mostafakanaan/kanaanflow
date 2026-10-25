@@ -1,0 +1,204 @@
+@page "/salaries"
+@inherits KfComponent
+
+<SettingsHeader Title="@T("salaries")" />
+
+@if (!Books.CanManageBook)
+{
+    <p class="notice">@T("err-salaries-managers-only")</p>
+}
+else
+{
+    <div class="month-switch" role="group" aria-label="@T("salaryMonth")">
+        <button type="button" class="icon-btn" aria-label="@T("prevMonth")" @onclick="() => month = SalaryMonths.Add(month, -1)"><Icon Name="back" Size="22" Class="flip" /></button>
+        <b>@Fmt.Month(month, Lang)</b>
+        <button type="button" class="icon-btn" aria-label="@T("nextMonth")" disabled="@(month == ThisMonth)" @onclick="() => month = SalaryMonths.Add(month, 1)"><Icon Name="chevron" Size="22" Class="flip" /></button>
+    </div>
+
+    @if (rows.Count > 0)
+    {
+        <section class="list-card salary-sum">
+            <div class="summary-head"><b>@T("salaryMonthTotals")</b><span style="font-size:15px">@rows.Count @T("employeesN")</span></div>
+            <div class="tbl-head cols-4"><span>@T("currency")</span><span>@T("salaryDue")</span><span>@T("salaryPaid")</span><span>@T("salaryLeft")</span></div>
+            @foreach (IGrouping<Currency, SalaryMonthStatus> group in rows.Select(r => r.Status).GroupBy(s => s.Currency))
+            {
+                <div class="tbl-row cols-4">
+                    <span style="font-weight:700"><Flag Currency="group.Key" Size="14" /> @Sym(group.Key)</span>
+                    <span class="n">@Fmt.Money(group.Sum(s => s.Due))</span>
+                    <span class="n c-in">@Fmt.Money(group.Sum(s => s.Paid))</span>
+                    <span class="n c-out">@Fmt.Money(group.Sum(s => s.Remaining))</span>
+                </div>
+            }
+        </section>
+    }
+
+    <section class="section">
+        <div class="title-row">
+            <h2 class="h2 count-title">@T("employees")<span class="count-pill">@rows.Count</span></h2>
+            <button type="button" class="link-btn" @onclick="() => adding = true"><Icon Name="plus" Size="20" />&nbsp;@T("addEmployee")</button>
+        </div>
+        <div class="list-card">
+            @foreach ((Contact Person, SalaryMonthStatus Status) row in rows)
+            {
+                <a class="row salary-row" href="salaries/@row.Person.Id">
+                    <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(row.Person.Name)</span>
+                    <span class="row-main">
+                        <span class="row-title">@row.Person.Name</span>
+                        <span class="row-sub"><span class="ltr">@Fmt.Money(row.Status.Due) @Sym(row.Status.Currency)</span> @T("perMonth")</span>
+                    </span>
+                    <SalaryStateChip Status="row.Status" />
+                </a>
+            }
+            @if (rows.Count == 0)
+            {
+                <p class="empty">@T("noSalariesMonth")</p>
+            }
+        </div>
+    </section>
+
+    @if (unpaid.Count > 0)
+    {
+        @if (confirmingAll)
+        {
+            <div class="add-panel" role="alert">
+                <p style="font-size:17px;font-weight:600;line-height:1.5">@T("payAllConfirm", unpaid.Count)</p>
+                <div class="wrap">
+                    @foreach (IGrouping<Currency, SalaryMonthStatus> group in unpaid.Select(r => r.Status).GroupBy(s => s.Currency))
+                    {
+                        <span class="tag ltr">@Fmt.Money(group.Sum(s => s.Remaining)) @Sym(group.Key)</span>
+                    }
+                </div>
+                <div class="grid-2">
+                    <button type="button" class="btn btn-ghost" @onclick="() => confirmingAll = false">@T("cancel")</button>
+                    <button type="button" class="btn btn-out" disabled="@busy" @onclick="PayAllAsync">@T("payAllYes", unpaid.Count)</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <button type="button" class="btn btn-out btn-tall" @onclick="() => confirmingAll = true"><Icon Name="out" Size="22" />@T("payAll", unpaid.Count)</button>
+        }
+    }
+
+    @if (others.Count > 0)
+    {
+        <section class="section">
+            <h2 class="h3">@T("noSalaryThisMonth")</h2>
+            <div class="list-card">
+                @foreach (Contact person in others)
+                {
+                    <a class="row salary-row" href="salaries/@person.Id">
+                        <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(person.Name)</span>
+                        <span class="row-main"><span class="row-title">@person.Name</span><span class="row-sub">@OtherText(person)</span></span>
+                        <Icon Name="chevron" Size="18" Class="flip hub-go" />
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
+    @if (adding)
+    {
+        <Sheet Open="true" Title="@T("addEmployee")" OnClose="() => adding = false">
+            <input class="input" type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPh")" aria-label="@T("searchPh")" />
+            <div class="picker-list">
+                @foreach (Contact person in Candidates)
+                {
+                    <a class="picker-item" href="salaries/@person.Id?set=1">
+                        <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(person.Name)</span>
+                        <span class="picker-text"><b>@person.Name</b><span>@Books.PeopleCategoryName(person.CategoryId)</span></span>
+                    </a>
+                }
+            </div>
+            @if (query.Trim().Length > 0 && !Book.Contacts.Any(c => string.Equals(c.Name, query.Trim(), StringComparison.CurrentCultureIgnoreCase)))
+            {
+                <button type="button" class="btn btn-primary" @onclick="AddNewAsync"><Icon Name="plus" Size="22" />@T("newEmployee") “@query.Trim()”</button>
+            }
+        </Sheet>
+    }
+}
+
+@code {
+    private string month = string.Empty;
+    private List<(Contact Person, SalaryMonthStatus Status)> rows = new List<(Contact, SalaryMonthStatus)>();
+    private List<(Contact Person, SalaryMonthStatus Status)> unpaid = new List<(Contact, SalaryMonthStatus)>();
+    private List<Contact> others = new List<Contact>();
+    private bool adding;
+    private bool confirmingAll;
+    private bool busy;
+    private string query = string.Empty;
+
+    private string ThisMonth => SalaryMonths.Of(Today);
+
+    /// <summary>People to add: employees first, then everyone else without a salary yet.</summary>
+    private IEnumerable<Contact> Candidates => Book.Contacts
+        .Where(c => !Book.Salaries.ContainsKey(c.Id))
+        .Where(c => query.Trim().Length == 0 || c.Name.Contains(query.Trim(), StringComparison.CurrentCultureIgnoreCase))
+        .OrderBy(c => c.CategoryId == "employee" ? 0 : 1)
+        .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        month = ThisMonth;
+    }
+
+    protected override bool ShouldRender()
+    {
+        Compute();
+        return true;
+    }
+
+    protected override void OnParametersSet() => Compute();
+
+    private void Compute()
+    {
+        rows = new List<(Contact, SalaryMonthStatus)>();
+        others = new List<Contact>();
+        foreach (Contact person in SalaryCalculator.Employees(Book))
+        {
+            SalaryMonthStatus? status = SalaryCalculator.MonthOf(Book, person.Id, month);
+            if (status != null)
+            {
+                rows.Add((person, status));
+            }
+            else
+            {
+                others.Add(person);
+            }
+        }
+
+        unpaid = rows.Where(r => r.Status.Remaining > 0m).ToList();
+    }
+
+    private string OtherText(Contact person)
+    {
+        SalaryPeriod? next = Book.Salaries[person.Id].FirstOrDefault(p => string.CompareOrdinal(p.FromMonth, month) > 0 && p.Amount > 0m);
+        return next != null ? T("salaryStarts") + " " + Fmt.Month(next.FromMonth, Lang) : T("salaryEnded");
+    }
+
+    private async Task PayAllAsync()
+    {
+        busy = true;
+        try
+        {
+            List<BookChange> payments = unpaid
+                .Select(r => (BookChange)new EntryRecorded { Entry = Books.SalaryPayment(r.Person.Id, month, r.Status.Remaining, r.Status.Currency, Today, string.Empty) })
+                .ToList();
+            await Books.RecordAsync(payments.ToArray());
+            Toasts.Show(T("paidAllToast", payments.Count));
+            confirmingAll = false;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task AddNewAsync()
+    {
+        Contact person = new Contact { Id = BookService.NewId(), Name = query.Trim(), CategoryId = Book.FindPeopleCategory("employee") != null ? "employee" : PeopleCategory.OtherId };
+        await Books.RecordAsync(new ContactSaved { Contact = person });
+        Nav.NavigateTo("salaries/" + person.Id + "?set=1");
+    }
+}

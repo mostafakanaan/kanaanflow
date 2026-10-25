@@ -26,6 +26,9 @@ Arabic first (right-to-left), English one tap away.
   (like an Owner, and approves Owners' entries), Employee (coming later) and Read-only.
 - **Who did it**: every entry shows who recorded it, and Owners' entries show whether an Accountant approved them.
   Reports, PDF and Excel include both, and can filter by them.
+- **Salaries** (Admins, Owners, Accountants): set each employee's monthly salary from a month on, see which months
+  are paid, partly paid or unpaid, pay one month or all remaining salaries at once. Payments are ordinary paid entries
+  under *Wages*, so they show in balances and reports.
 - **Settings** under *More*, grouped: Users, Categories, Entities, Balances, Language & app, and the Admin panel.
 - **Team sync**: devices share an append-only event log through the KanaanFlow sync service (ASP.NET Core +
   PostgreSQL on the Pi), so entries are never overwritten. See [`docs/hosting-pi.md`](docs/hosting-pi.md).

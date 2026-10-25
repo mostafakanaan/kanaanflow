@@ -176,6 +176,25 @@ public static class BookProjector
 
                 break;
 
+            case SalarySet salarySet:
+                SalaryPeriod period = salarySet.Salary.Clone();
+                if (!SalaryMonths.IsValid(period.FromMonth) || period.Amount < 0m)
+                {
+                    break;
+                }
+
+                if (!book.Salaries.TryGetValue(period.ContactId, out List<SalaryPeriod>? periods))
+                {
+                    periods = new List<SalaryPeriod>();
+                    book.Salaries[period.ContactId] = periods;
+                }
+
+                // A newer salary for the same month replaces the older one.
+                periods.RemoveAll(p => p.FromMonth == period.FromMonth);
+                periods.Add(period);
+                periods.Sort((a, b) => string.CompareOrdinal(a.FromMonth, b.FromMonth));
+                break;
+
             case OpeningBalanceSet opening:
                 book.OpeningBalances[opening.Currency] = opening.Amount;
                 break;

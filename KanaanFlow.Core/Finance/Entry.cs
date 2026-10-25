@@ -47,6 +47,9 @@ public sealed class Entry
     /// <summary>Exchange only: "manual" or the name of the online source.</summary>
     public string RateSource { get; set; } = string.Empty;
 
+    /// <summary>Set when this entry pays an employee's salary: the month it is for, as yyyy-MM.</summary>
+    public string? SalaryMonth { get; set; }
+
     public string CreatedBy { get; set; } = string.Empty;
 
     public DateTime CreatedUtc { get; set; }
