@@ -1,5 +1,7 @@
 namespace KanaanFlow.Core.Finance;
 
+using System.Text.Json.Serialization;
+
 public sealed class TeamMember
 {
     public string Id { get; set; } = string.Empty;
@@ -8,7 +10,23 @@ public sealed class TeamMember
 
     public TeamRole Role { get; set; } = TeamRole.Staff;
 
-    public bool CanRecord => Role != TeamRole.Viewer;
+    /// <summary>False once removed from the team; kept so their past entries still show who recorded them.</summary>
+    public bool Active { get; set; } = true;
 
-    public bool CanManage => Role == TeamRole.Owner;
+    [JsonIgnore]
+    public bool CanRecord => RoleRules.CanRecord(Role);
+
+    [JsonIgnore]
+    public bool CanManageBook => RoleRules.CanManageBook(Role);
+
+    [JsonIgnore]
+    public bool CanManageMembers => RoleRules.CanManageMembers(Role);
+
+    [JsonIgnore]
+    public bool CanApprove => RoleRules.CanApprove(Role);
+
+    [JsonIgnore]
+    public bool IsAdmin => Role == TeamRole.Admin;
+
+    public TeamMember Clone() => (TeamMember)MemberwiseClone();
 }

@@ -1,0 +1,36 @@
+@page "/more/balances"
+@inherits KfComponent
+
+<SettingsHeader Title="@T("tileBalances")" />
+
+<section class="card card-pad">
+    <h2 class="h3">@T("openingTitle")</h2>
+    <p class="muted" style="font-size:15px">@T("openingHint")</p>
+    @foreach (Currency currency in Book.Currencies)
+    {
+        Currency c = currency;
+        <div class="opening">
+            <label for="open-@c"><Flag Currency="c" Size="18" /> @Fmt.LongName(c, Lang)</label>
+            @if (Books.CanManageBook)
+            {
+                <input id="open-@c" class="input" inputmode="decimal" value="@Fmt.Money(Book.OpeningBalances[c])" @onchange="e => SetOpeningAsync(c, e.Value?.ToString())" />
+            }
+            else
+            {
+                <span id="open-@c" class="ltr" style="font-size:18px;font-weight:700">@Fmt.Money(Book.OpeningBalances[c]) @Sym(c)</span>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private async Task SetOpeningAsync(Currency currency, string? text)
+    {
+        decimal amount = Fmt.ParseAmount(text) ?? 0m;
+        if (amount != Book.OpeningBalances[currency])
+        {
+            await Books.RecordAsync(new OpeningBalanceSet { Currency = currency, Amount = amount });
+            Toasts.Show(T("saved"));
+        }
+    }
+}

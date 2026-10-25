@@ -1,0 +1,33 @@
+@inherits KfComponent
+
+@* Owners' entries: whether an Accountant approved them (informative only), with the approve button for Accountants. *@
+@if (Entry.NeedsApproval)
+{
+    <span class="approval @(Entry.ApprovedBy != null ? "done" : "pending")">
+        @if (Entry.ApprovedBy != null)
+        {
+            <Icon Name="check" Size="16" Stroke="2.6" />
+            <span>@T("approvedBy") @Books.MemberName(Entry.ApprovedBy)</span>
+        }
+        else
+        {
+            <Icon Name="clock" Size="16" Stroke="2.4" />
+            <span>@T("awaitingApproval")</span>
+            @if (Books.CanApprove && Entry.CreatedBy != Books.Settings.MemberId)
+            {
+                <button type="button" class="approve-btn" @onclick="ApproveAsync">@T("approve")</button>
+            }
+        }
+    </span>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Entry Entry { get; set; } = default!;
+
+    private async Task ApproveAsync()
+    {
+        await Books.RecordAsync(new EntryApproved { EntryId = Entry.Id });
+        Toasts.Show(T("approvedDone"));
+    }
+}

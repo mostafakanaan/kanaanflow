@@ -20,7 +20,7 @@
                     @foreach (Currency c in Book.Currencies)
                     {
                         Currency pick = c;
-                        <button type="button" class="sel cur-chip-sm" aria-pressed="@(from == c ? "true" : "false")" @onclick="() => PickFromAsync(pick)">@Sym(c)</button>
+                        <button type="button" class="sel cur-chip-sm" aria-label="@Fmt.LongName(c, Lang)" aria-pressed="@(from == c ? "true" : "false")" @onclick="() => PickFromAsync(pick)"><Flag Currency="c" Size="20" /><span class="cur-sym">@Sym(c)</span></button>
                     }
                 </div>
             </section>
@@ -30,7 +30,7 @@
                     @foreach (Currency c in Book.Currencies)
                     {
                         Currency pick = c;
-                        <button type="button" class="sel cur-chip-sm" aria-pressed="@(to == c ? "true" : "false")" @onclick="() => PickToAsync(pick)">@Sym(c)</button>
+                        <button type="button" class="sel cur-chip-sm" aria-label="@Fmt.LongName(c, Lang)" aria-pressed="@(to == c ? "true" : "false")" @onclick="() => PickToAsync(pick)"><Flag Currency="c" Size="20" /><span class="cur-sym">@Sym(c)</span></button>
                     }
                 </div>
                 <div class="fx-result" aria-live="polite"><span class="n">@Fmt.Money(Result)</span><span class="s">@Sym(to)</span></div>

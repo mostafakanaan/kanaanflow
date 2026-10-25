@@ -51,6 +51,23 @@
             }
         </select>
     </label>
+    <label class="field">@T("recordedBy")
+        <select class="select" @bind="createdBy">
+            <option value="">@T("everyone")</option>
+            @foreach (TeamMember member in Book.Members.Where(m => m.Name.Length > 0).OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                <option value="@member.Id">@member.Name@(member.Active ? string.Empty : " (" + T("removed") + ")")</option>
+            }
+        </select>
+    </label>
+    <h2 class="h3" style="margin-top:6px">@T("approval")</h2>
+    <div class="wrap">
+        @foreach ((ApprovalFilter Value, string Label) a in Approvals)
+        {
+            ApprovalFilter value = a.Value;
+            <button type="button" class="sel chip" aria-pressed="@(approval == value ? "true" : "false")" @onclick="() => approval = value">@T(a.Label)</button>
+        }
+    </div>
 </section>
 
 <section class="list-card">
@@ -105,6 +122,13 @@
     private readonly HashSet<string> peopleCats = new HashSet<string>();
     private readonly HashSet<string> entryCats = new HashSet<string>();
     private string personId = string.Empty;
+    private string createdBy = string.Empty;
+    private ApprovalFilter approval = ApprovalFilter.All;
+
+    private static readonly (ApprovalFilter Value, string Label)[] Approvals =
+    {
+        (ApprovalFilter.All, "allEntries"), (ApprovalFilter.Pending, "awaitingApproval"), (ApprovalFilter.Approved, "approved")
+    };
     private int shown = 50;
     private ReportResult result = new ReportResult(new ReportFilter(), Array.Empty<Entry>(), Array.Empty<CurrencyTotals>());
 
@@ -128,7 +152,12 @@
 
     private ReportFilter BuildFilter()
     {
-        ReportFilter filter = new ReportFilter { ContactId = personId.Length > 0 ? personId : null };
+        ReportFilter filter = new ReportFilter
+        {
+            ContactId = personId.Length > 0 ? personId : null,
+            CreatedBy = createdBy.Length > 0 ? createdBy : null,
+            Approval = approval
+        };
         switch (period)
         {
             case "today":
@@ -181,6 +210,16 @@
         if (personId.Length > 0)
         {
             lines.Add(T("personCol") + ": " + Books.ContactName(personId));
+        }
+
+        if (createdBy.Length > 0)
+        {
+            lines.Add(T("recordedBy") + ": " + Books.MemberName(createdBy));
+        }
+
+        if (approval != ApprovalFilter.All)
+        {
+            lines.Add(T("approval") + ": " + T(approval == ApprovalFilter.Pending ? "awaitingApproval" : "approved"));
         }
 
         return lines;

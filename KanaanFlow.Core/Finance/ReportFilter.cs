@@ -18,4 +18,20 @@ public sealed class ReportFilter
 
     /// <summary>Only this contact's entries, or everyone when null.</summary>
     public string? ContactId { get; set; }
+
+    /// <summary>Only entries this team member recorded, or everyone's when null.</summary>
+    public string? CreatedBy { get; set; }
+
+    public ApprovalFilter Approval { get; set; } = ApprovalFilter.All;
+}
+
+public enum ApprovalFilter
+{
+    All,
+
+    /// <summary>Owners' entries an Accountant has not approved yet.</summary>
+    Pending,
+
+    /// <summary>Owners' entries an Accountant has approved.</summary>
+    Approved
 }

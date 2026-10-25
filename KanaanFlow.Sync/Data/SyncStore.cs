@@ -53,7 +53,7 @@ public sealed class SyncStore
             {
                 await using NpgsqlCommand command = db.CreateCommand(sql);
                 await command.ExecuteNonQueryAsync();
-                return;
+                break;
             }
             catch (NpgsqlException ex) when (attempt < 30)
             {
@@ -61,6 +61,48 @@ public sealed class SyncStore
                 await Task.Delay(TimeSpan.FromSeconds(2));
             }
         }
+
+        await PromoteFirstOwnerAsync();
+    }
+
+    /// <summary>
+    /// Books created before the Admin role existed: the first owner becomes the Admin, so someone can still do everything.
+    /// </summary>
+    public async Task PromoteFirstOwnerAsync()
+    {
+        await using NpgsqlConnection connection = await db.OpenConnectionAsync();
+        await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
+        await LockLogAsync(connection, tx);
+        if (await CountActiveAdminsAsync(connection, tx) > 0)
+        {
+            return;
+        }
+
+        MemberDto? owner = null;
+        await using (NpgsqlCommand find = new NpgsqlCommand(
+            "select id, name from members where active and role = 'Owner' order by created_at limit 1", connection, tx))
+        await using (NpgsqlDataReader reader = await find.ExecuteReaderAsync())
+        {
+            if (await reader.ReadAsync())
+            {
+                owner = new MemberDto(reader.GetString(0), reader.GetString(1), nameof(TeamRole.Admin), true);
+            }
+        }
+
+        if (owner == null)
+        {
+            return;
+        }
+
+        await using (NpgsqlCommand update = new NpgsqlCommand("update members set role = 'Admin' where id = @id", connection, tx))
+        {
+            update.Parameters.AddWithValue("id", owner.Id);
+            await update.ExecuteNonQueryAsync();
+        }
+
+        await AppendMemberEventAsync(connection, tx, owner, owner.Id);
+        await tx.CommitAsync();
+        logger.LogInformation("Made {Name} the Admin of this book.", owner.Name);
     }
 
     public async Task<bool> IsReadyAsync()
@@ -69,28 +111,28 @@ public sealed class SyncStore
         return (bool)(await command.ExecuteScalarAsync())!;
     }
 
-    /// <summary>Creates the first owner. Returns null when the book already has members.</summary>
-    public async Task<SessionResponse?> SetupAsync(string name, string password, string? memberId)
+    /// <summary>
+    /// Creates a new Admin (the person knew the master password). Keeps the device's member id when it is free,
+    /// so entries made on that device before registering stay theirs. Returns null when an active member has that name.
+    /// </summary>
+    public async Task<SessionResponse?> RegisterAsync(string name, string password, string? memberId)
     {
         await using NpgsqlConnection connection = await db.OpenConnectionAsync();
         await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
         await LockLogAsync(connection, tx);
 
-        await using (NpgsqlCommand exists = new NpgsqlCommand("select exists (select 1 from members)", connection, tx))
+        if (await NameTakenAsync(connection, tx, name, exceptId: null))
         {
-            if ((bool)(await exists.ExecuteScalarAsync())!)
-            {
-                return null;
-            }
+            return null;
         }
 
-        string id = IsValidId(memberId) ? memberId! : NewId();
-        MemberDto owner = new MemberDto(id, name.Trim(), nameof(TeamRole.Owner), true);
-        await InsertMemberAsync(connection, tx, owner, PasswordHasher.Hash(password));
-        await AppendMemberEventAsync(connection, tx, owner, actorId: id);
+        string id = IsValidId(memberId) && !await MemberExistsAsync(connection, tx, memberId!) ? memberId! : NewId();
+        MemberDto admin = new MemberDto(id, name.Trim(), nameof(TeamRole.Admin), true);
+        await InsertMemberAsync(connection, tx, admin, PasswordHasher.Hash(password));
+        await AppendMemberEventAsync(connection, tx, admin, actorId: id);
         string token = await CreateSessionAsync(connection, tx, id);
         await tx.CommitAsync();
-        return new SessionResponse(token, owner);
+        return new SessionResponse(token, admin);
     }
 
     public async Task<SessionResponse?> LoginAsync(string name, string password)
@@ -143,6 +185,14 @@ public sealed class SyncStore
         await using NpgsqlCommand command = db.CreateCommand("delete from sessions where token_hash = @hash");
         command.Parameters.AddWithValue("hash", PasswordHasher.HashToken(token));
         await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>The role of a member, or null when there is no such member.</summary>
+    public async Task<string?> RoleOfAsync(string id)
+    {
+        await using NpgsqlCommand command = db.CreateCommand("select role from members where id = @id");
+        command.Parameters.AddWithValue("id", id);
+        return (string?)await command.ExecuteScalarAsync();
     }
 
     public async Task<List<MemberDto>> MembersAsync()
@@ -201,10 +251,10 @@ public sealed class SyncStore
 
         string role = request.Role ?? current.Role;
         bool active = request.Active ?? current.Active;
-        bool losesOwner = current.Role == nameof(TeamRole.Owner) && current.Active && (role != nameof(TeamRole.Owner) || !active);
-        if (losesOwner && await CountActiveOwnersAsync(connection, tx) <= 1)
+        bool losesAdmin = current.Role == nameof(TeamRole.Admin) && current.Active && (role != nameof(TeamRole.Admin) || !active);
+        if (losesAdmin && await CountActiveAdminsAsync(connection, tx) <= 1)
         {
-            return "last-owner";
+            return "last-admin";
         }
 
         if (!active && id == actorId)
@@ -319,8 +369,11 @@ public sealed class SyncStore
                 continue;
             }
 
+            // Every change is tied to the person who made it, so nobody can record in someone else's name.
             string? reason = bookEvent.AtUtc > DateTime.UtcNow.AddDays(1)
                 ? "time-in-future"
+                : bookEvent.Actor != member.Id
+                ? "wrong-actor"
                 : ChangePolicy.Check(
                     role,
                     member.Id,
@@ -341,6 +394,72 @@ public sealed class SyncStore
 
         await tx.CommitAsync();
         return new PushResponse(accepted, rejected);
+    }
+
+    /// <summary>Counts for the admin panel.</summary>
+    public async Task<AdminOverview> OverviewAsync()
+    {
+        await using NpgsqlCommand command = db.CreateCommand(
+            "select (select count(*) from members where active), (select count(*) from events), "
+            + "(select count(*) from sessions where expires_at > now()), (select max(received_at) from events)");
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return new AdminOverview(
+            reader.GetInt64(0),
+            reader.GetInt64(1),
+            reader.GetInt64(2),
+            reader.IsDBNull(3) ? null : DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc));
+    }
+
+    /// <summary>Signed-in devices, most recently used first.</summary>
+    public async Task<List<AdminSession>> SessionsAsync()
+    {
+        List<AdminSession> sessions = new List<AdminSession>();
+        await using NpgsqlCommand command = db.CreateCommand(
+            "select m.id, m.name, s.created_at, s.last_seen_at from sessions s join members m on m.id = s.member_id "
+            + "where s.expires_at > now() and m.active order by s.last_seen_at desc limit 200");
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            sessions.Add(new AdminSession(
+                reader.GetString(0),
+                reader.GetString(1),
+                DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc),
+                DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc)));
+        }
+
+        return sessions;
+    }
+
+    /// <summary>Signs a member out on every device. Returns how many sessions ended.</summary>
+    public async Task<int> SignOutEverywhereAsync(string memberId)
+    {
+        await using NpgsqlCommand command = db.CreateCommand("delete from sessions where member_id = @id");
+        command.Parameters.AddWithValue("id", memberId);
+        return await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>The newest changes in the log with who made them: the book's audit trail.</summary>
+    public async Task<List<AdminActivity>> ActivityAsync(int limit)
+    {
+        List<AdminActivity> rows = new List<AdminActivity>();
+        await using NpgsqlCommand command = db.CreateCommand(
+            "select e.seq, e.at, e.received_at, e.kind, e.device_id, m.name from events e join members m on m.id = e.member_id "
+            + "order by e.seq desc limit @limit");
+        command.Parameters.AddWithValue("limit", Math.Clamp(limit, 1, MaxPage));
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            rows.Add(new AdminActivity(
+                reader.GetInt64(0),
+                DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc),
+                DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(5)));
+        }
+
+        return rows;
     }
 
     public static bool IsValidId(string? id) => id != null && id.Length is > 0 and <= 64 && id.All(c => char.IsAsciiLetterOrDigit(c) || c == '-');
@@ -386,10 +505,17 @@ public sealed class SyncStore
         return (bool)(await command.ExecuteScalarAsync())!;
     }
 
-    private static async Task<long> CountActiveOwnersAsync(NpgsqlConnection connection, NpgsqlTransaction tx)
+    private static async Task<long> CountActiveAdminsAsync(NpgsqlConnection connection, NpgsqlTransaction tx)
     {
-        await using NpgsqlCommand command = new NpgsqlCommand("select count(*) from members where active and role = 'Owner'", connection, tx);
+        await using NpgsqlCommand command = new NpgsqlCommand("select count(*) from members where active and role = 'Admin'", connection, tx);
         return (long)(await command.ExecuteScalarAsync())!;
+    }
+
+    private static async Task<bool> MemberExistsAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string id)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand("select exists (select 1 from members where id = @id)", connection, tx);
+        command.Parameters.AddWithValue("id", id);
+        return (bool)(await command.ExecuteScalarAsync())!;
     }
 
     /// <summary>Tells every device about a member, so the team list and roles show in the app.</summary>

@@ -4,11 +4,15 @@
 create table if not exists members (
     id            text        primary key,
     name          text        not null,
-    role          text        not null check (role in ('Owner', 'Staff', 'Viewer')),
+    role          text        not null,
     password_hash text        not null,
     active        boolean     not null default true,
     created_at    timestamptz not null default now()
 );
+
+-- Roles: Admin, Owner, Accountant, Staff (Employee), Viewer (read-only). Re-created so older databases get the new roles.
+alter table members drop constraint if exists members_role_check;
+alter table members add constraint members_role_check check (role in ('Admin', 'Owner', 'Accountant', 'Staff', 'Viewer'));
 
 create unique index if not exists members_active_name on members (lower(name)) where active;
 

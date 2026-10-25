@@ -19,7 +19,7 @@ public static class ChangePolicy
         Func<string, string?> entryOwner,
         Func<string, string?> loanOwner)
     {
-        if (role == TeamRole.Viewer)
+        if (!RoleRules.CanRecord(role))
         {
             return "view-only";
         }
@@ -29,7 +29,12 @@ public static class ChangePolicy
             return "members-managed-by-server";
         }
 
-        if (role == TeamRole.Owner)
+        if (change is EntryApproved)
+        {
+            return RoleRules.CanApprove(role) ? null : "accountant-only";
+        }
+
+        if (RoleRules.CanManageBook(role))
         {
             return null;
         }

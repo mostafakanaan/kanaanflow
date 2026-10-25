@@ -1,6 +1,49 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject BookService Books
+@inject NavigationManager Nav
 
-@* Full-screen, one-question-per-step flows: no tab bar. *@
+@* Full-screen, one-question-per-step flows: no tab bar. Only the welcome screen works while logged out. *@
 <DocumentDir />
-@Body
+@if (Books.IsLoggedIn || IsWelcome)
+{
+    @Body
+}
 <ToastHost InFlow="true" />
+
+@code {
+    private bool IsWelcome => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("welcome", StringComparison.OrdinalIgnoreCase);
+
+    public void Dispose()
+    {
+        Books.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
+    protected override void OnInitialized()
+    {
+        Books.Changed += OnChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        RequireLogIn();
+    }
+
+    private void RequireLogIn()
+    {
+        if (!Books.IsLoggedIn && !IsWelcome)
+        {
+            Nav.NavigateTo("welcome", replace: true);
+        }
+    }
+
+    private void OnChanged() => InvokeAsync(() =>
+    {
+        RequireLogIn();
+        StateHasChanged();
+    });
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        RequireLogIn();
+        StateHasChanged();
+    });
+}

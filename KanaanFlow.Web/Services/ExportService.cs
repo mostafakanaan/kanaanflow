@@ -34,7 +34,7 @@ public sealed class ExportService
         bool rtl = book.IsRtl;
         List<IReadOnlyList<object?>> entries = new List<IReadOnlyList<object?>>
         {
-            new object?[] { book.T("date"), book.T("time"), book.T("typeCol"), book.T("personCol"), book.T("category"), book.T("noteCol"), book.T("inTotal"), book.T("outTotal"), book.T("currency") }
+            new object?[] { book.T("date"), book.T("time"), book.T("typeCol"), book.T("personCol"), book.T("category"), book.T("noteCol"), book.T("inTotal"), book.T("outTotal"), book.T("currency"), book.T("recordedBy"), book.T("approval") }
         };
         foreach (Entry entry in report.Entries)
         {
@@ -48,7 +48,9 @@ public sealed class ExportService
                 entry.Note,
                 entry.Type == EntryType.In ? entry.Amount : null,
                 entry.Type == EntryType.Out ? entry.Amount : null,
-                entry.Currency.ToString()
+                Fmt.LongName(entry.Currency, book.Language),
+                book.MemberName(entry.CreatedBy),
+                ApprovalText(entry)
             });
         }
 
@@ -58,7 +60,7 @@ public sealed class ExportService
         };
         foreach (CurrencyTotals totals in report.Totals)
         {
-            summary.Add(new object?[] { totals.Currency.ToString(), totals.In, totals.Out, totals.Net });
+            summary.Add(new object?[] { Fmt.LongName(totals.Currency, book.Language), totals.In, totals.Out, totals.Net });
         }
 
         XlsxWriter writer = new XlsxWriter();
@@ -73,7 +75,7 @@ public sealed class ExportService
         doc.MetaLines.AddRange(metaLines);
         doc.MetaLines.Add(book.T("printedOn") + ": " + Fmt.LongDate(book.Today, book.Language) + " · " + report.Entries.Count + " " + book.T("entriesN"));
         AddTotals(doc, report.Totals);
-        doc.EntriesHeader.AddRange(new[] { book.T("date"), book.T("typeCol"), book.T("personCol"), book.T("category"), book.T("noteCol"), book.T("amount") });
+        doc.EntriesHeader.AddRange(new[] { book.T("date"), book.T("typeCol"), book.T("personCol"), book.T("category"), book.T("noteCol"), book.T("amount"), book.T("recordedBy"), book.T("approval") });
         foreach (Entry entry in report.Entries)
         {
             doc.EntriesRows.Add(new List<string>
@@ -83,7 +85,9 @@ public sealed class ExportService
                 book.ContactName(entry.ContactId),
                 book.EntryCategoryName(entry.CategoryId),
                 entry.Note,
-                Fmt.Signed(entry.Amount, entry.Type == EntryType.In) + " " + book.Sym(entry.Currency)
+                Fmt.Signed(entry.Amount, entry.Type == EntryType.In) + " " + book.Sym(entry.Currency),
+                book.MemberName(entry.CreatedBy),
+                ApprovalText(entry)
             });
         }
 
@@ -106,6 +110,24 @@ public sealed class ExportService
         {
             doc.TotalsRows.Add(new List<string> { book.Sym(row.Currency), Fmt.Money(row.In), Fmt.Money(row.Out), Fmt.Net(row.Net) });
         }
+    }
+
+    /// <summary>Downloads every change in the book as JSON: a full backup that any device can read.</summary>
+    public Task ExportBackupAsync()
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(book.ExportEventsJson());
+        return SaveAsync("KanaanFlow_backup_" + Fmt.Iso(book.Today) + ".json", "application/json", bytes);
+    }
+
+    /// <summary>"Approved by …", "Awaiting approval", or empty for entries that don't need approval.</summary>
+    public string ApprovalText(Entry entry)
+    {
+        if (!entry.NeedsApproval)
+        {
+            return string.Empty;
+        }
+
+        return entry.ApprovedBy != null ? book.T("approvedBy") + " " + book.MemberName(entry.ApprovedBy) : book.T("awaitingApproval");
     }
 
     private async Task SaveAsync(string name, string mime, byte[] bytes)

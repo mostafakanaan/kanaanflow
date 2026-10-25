@@ -22,7 +22,10 @@ public sealed class Book
 
     public List<EntryCategory> EntryCategories { get; } = DefaultCategories.Entries();
 
+    /// <summary>Everyone who has been on the team, including removed members (see <see cref="TeamMember.Active"/>).</summary>
     public List<TeamMember> Members { get; } = new List<TeamMember>();
+
+    public IEnumerable<TeamMember> ActiveMembers => Members.Where(m => m.Active);
 
     public Dictionary<Currency, decimal> OpeningBalances { get; } = Currencies.ToDictionary(c => c, c => 0m);
 

@@ -1,0 +1,91 @@
+@inherits KfComponent
+@inject SyncService Sync
+
+@* The sync status as a colored icon in the top bar; tapping it shows the details and "Sync now". *@
+<button type="button" class="top-btn sync-btn @CssClass" aria-label="@T("sync") · @StatusText" aria-haspopup="dialog" @onclick="() => open = true">
+    <Icon Name="@IconName" Size="24" Class="@(Sync.State == SyncState.Syncing ? "spin" : null)" />
+    @if (Books.PendingCount > 0 && Sync.State != SyncState.Synced)
+    {
+        <span class="badge" aria-hidden="true">@Books.PendingCount</span>
+    }
+</button>
+
+<Sheet Open="open" Title="@T("sync")" OnClose="() => open = false">
+    <div class="sync-status @CssClass">
+        <Icon Name="@IconName" Size="28" />
+        <b>@StatusText</b>
+    </div>
+    <p style="font-size:16px;line-height:1.55">@DetailText</p>
+
+    @if (Books.Settings.LastSyncUtc is DateTime last && Books.Settings.SignedIn)
+    {
+        <p class="muted small">@T("lastSync"): @Books.DayLabel(DateOnly.FromDateTime(last.ToLocalTime())) <span class="ltr">@last.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)</span></p>
+    }
+
+    @if (Sync.HoldingUploads)
+    {
+        <div class="add-panel" role="alert">
+            <p style="font-size:16px;line-height:1.5">@T("holdQuestion").Replace("{0}", Books.ForeignUnsyncedEvents().Count.ToString(System.Globalization.CultureInfo.InvariantCulture))</p>
+            <div class="grid-2">
+                <button type="button" class="btn btn-ghost" @onclick="() => Sync.ResolveHeldAsync(false)">@T("holdDiscard")</button>
+                <button type="button" class="btn btn-primary" @onclick="() => Sync.ResolveHeldAsync(true)">@T("holdUpload")</button>
+            </div>
+        </div>
+    }
+
+    @if (Books.Settings.SignedIn)
+    {
+        <button type="button" class="btn btn-primary" disabled="@(Sync.State == SyncState.Syncing || !Sync.IsOnline)" @onclick="Sync.SyncNowAsync"><Icon Name="sync" Size="22" />@T("syncNow")</button>
+    }
+    else if (Books.Settings.LocalOnly)
+    {
+        <p class="muted small">@T("localConnectHint")</p>
+        <button type="button" class="btn btn-outline" @onclick="ConnectAsync">@T("connectServer")</button>
+    }
+</Sheet>
+
+@code {
+    private bool open;
+
+    private string CssClass => Sync.State switch
+    {
+        _ when Sync.HoldingUploads => "warn",
+        SyncState.Offline => "warn",
+        SyncState.Error => "warn",
+        SyncState.LocalOnly => "local",
+        SyncState.Syncing => "busy",
+        _ => "ok"
+    };
+
+    private string IconName => Sync.State switch
+    {
+        SyncState.Offline => "cloud-off",
+        SyncState.Syncing => "sync",
+        _ => "cloud"
+    };
+
+    private string StatusText => Sync.State switch
+    {
+        SyncState.Offline => T("offline") + (Books.PendingCount > 0 ? " · " + Books.PendingCount : string.Empty),
+        SyncState.Error => T("syncProblem"),
+        SyncState.Syncing => T("syncing"),
+        SyncState.LocalOnly => T("onDevice"),
+        _ => T("savedOnline")
+    };
+
+    private string DetailText => Sync.State switch
+    {
+        SyncState.Offline => T("syncOff") + (Books.PendingCount > 0 ? " (" + Books.PendingCount + " " + T("waiting") + ")" : string.Empty),
+        SyncState.Error => T("syncErr"),
+        SyncState.LocalOnly => T("syncLocalOnly"),
+        _ => T("syncOk")
+    };
+
+    /// <summary>A device-only book joins the team server by logging out and signing in (or registering) there.</summary>
+    private async Task ConnectAsync()
+    {
+        open = false;
+        await Sync.LogOutAsync();
+        Nav.NavigateTo("welcome");
+    }
+}

@@ -12,22 +12,23 @@
         {
             ApiMember m = member;
             bool isMe = m.Id == Books.Settings.MemberId;
+            bool editable = !isMe && RoleRules.CanEdit(Books.MyRole, m.Role);
             <div class="member" style="flex-wrap:wrap">
                 <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(m.Name)</span>
                 <span class="nm">@m.Name@(isMe ? " (" + T("you") + ")" : string.Empty)</span>
-                @if (isMe)
+                <RoleBadge Role="m.Role" />
+                @if (editable)
                 {
-                    <span class="role @RoleClass(m.Role)">@RoleName(m.Role)</span>
-                }
-                else
-                {
-                    <select class="kind" style="height:44px;border-radius:10px;border:2px solid var(--field);background:#fff;font-size:15px" aria-label="@T("role") · @m.Name" value="@m.Role" @onchange="e => SetRoleAsync(m, e.Value?.ToString())">
-                        <option value="@TeamRole.Owner">@T("roleOwner")</option>
-                        <option value="@TeamRole.Staff">@T("roleStaff")</option>
-                        <option value="@TeamRole.Viewer">@T("roleViewer")</option>
-                    </select>
-                    <button type="button" class="link-btn" style="font-size:15px" aria-expanded="@(resetting == m.Id ? "true" : "false")" @onclick="() => ToggleReset(m.Id)">@T("resetPassword")</button>
-                    <button type="button" class="icon-btn" aria-label="@T("removeMember") @m.Name" @onclick="() => RemoveAsync(m)"><Icon Name="trash" Size="22" /></button>
+                    <div class="member-actions">
+                        <select class="kind" aria-label="@T("role") · @m.Name" value="@m.Role" @onchange="e => SetRoleAsync(m, e.Value?.ToString())">
+                            @foreach (TeamRole role in RoleRules.Ordered)
+                            {
+                                <option value="@role" disabled="@(role != m.Role && !RoleRules.CanAssign(Books.MyRole, role))">@RoleOption(role)</option>
+                            }
+                        </select>
+                        <button type="button" class="link-btn" style="font-size:15px" aria-expanded="@(resetting == m.Id ? "true" : "false")" @onclick="() => ToggleReset(m.Id)">@T("resetPassword")</button>
+                        <button type="button" class="icon-btn" aria-label="@T("removeMember") @m.Name" @onclick="() => RemoveAsync(m)"><Icon Name="trash" Size="22" /></button>
+                    </div>
                 }
             </div>
             @if (resetting == m.Id)
@@ -43,24 +44,36 @@
         <input class="input" style="height:52px;font-size:17px" type="text" @bind="newName" placeholder="@T("memberName")" aria-label="@T("memberName")" />
         <div style="display:flex;gap:8px">
             <select class="select" style="height:52px;font-size:16px;flex:1" aria-label="@T("role")" @bind="newRole">
-                <option value="@TeamRole.Staff">@T("roleStaff")</option>
-                <option value="@TeamRole.Viewer">@T("roleViewer")</option>
-                <option value="@TeamRole.Owner">@T("roleOwner")</option>
+                @foreach (TeamRole role in RoleRules.Ordered)
+                {
+                    <option value="@role" disabled="@(!RoleRules.CanAssign(Books.MyRole, role))">@RoleOption(role)</option>
+                }
             </select>
             <input class="input" style="height:52px;font-size:17px;flex:1" type="text" @bind="newPassword" placeholder="@T("password")" aria-label="@T("password")" autocomplete="off" />
         </div>
         <button type="button" class="btn btn-primary" disabled="@busy" @onclick="AddAsync">@T("invite")</button>
+
+        <details class="roles-help">
+            <summary>@T("rolesHelp")</summary>
+            <ul>
+                <li><b>@T("roleAdmin")</b>: @T("roleAdminSub")</li>
+                <li><b>@T("roleOwner")</b>: @T("roleOwnerSub")</li>
+                <li><b>@T("roleAccountant")</b>: @T("roleAccountantSub")</li>
+                <li><b>@T("roleStaff")</b>: @T("soon")</li>
+                <li><b>@T("roleViewer")</b>: @T("roleViewerSub")</li>
+            </ul>
+        </details>
     }
     else
     {
-        @foreach (TeamMember member in Book.Members)
+        @foreach (TeamMember member in Book.ActiveMembers)
         {
             TeamMember m = member;
             bool isMe = m.Id == Books.Settings.MemberId;
             <div class="member">
                 <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(m.Name)</span>
                 <span class="nm">@(m.Name.Length > 0 ? m.Name : "—")@(isMe ? " (" + T("you") + ")" : string.Empty)</span>
-                <span class="role @RoleClass(m.Role)">@RoleName(m.Role)</span>
+                <RoleBadge Role="m.Role" />
             </div>
         }
 
@@ -87,13 +100,13 @@
     private bool busy;
     private string newName = string.Empty;
     private string newPassword = string.Empty;
-    private TeamRole newRole = TeamRole.Staff;
+    private TeamRole newRole = TeamRole.Viewer;
     private string? resetting;
     private string resetValue = string.Empty;
     private string error = string.Empty;
 
-    /// <summary>Owners manage the team on the server once signed in and the member list has loaded.</summary>
-    private bool ServerManaged => Books.Settings.SignedIn && Books.CanManage && loaded;
+    /// <summary>Admins, Owners and Accountants manage the team on the server once signed in and the list has loaded.</summary>
+    private bool ServerManaged => Books.Settings.SignedIn && Books.CanManageMembers && loaded;
 
     protected override async Task OnInitializedAsync()
     {
@@ -104,7 +117,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Signing in on this page: load the team once for the new session.
-        if (Books.Settings.SignedIn && Books.CanManage && loadedFor != Books.Settings.Token)
+        if (Books.Settings.SignedIn && Books.CanManageMembers && loadedFor != Books.Settings.Token)
         {
             await LoadAsync();
             StateHasChanged();
@@ -114,7 +127,7 @@
     private async Task LoadAsync()
     {
         loadedFor = Books.Settings.Token;
-        if (!Books.Settings.SignedIn || !Books.CanManage)
+        if (!Books.Settings.SignedIn || !Books.CanManageMembers)
         {
             loaded = false;
             return;
@@ -143,8 +156,7 @@
         }
         catch (ApiException ex)
         {
-            string key = "err-" + ex.Code;
-            error = T(key) == key ? T("err-server-error") : T(key);
+            error = ErrorText.For(Books, ex.Code);
         }
         catch (HttpRequestException)
         {
@@ -201,17 +213,5 @@
             undo: () => RunAsync(() => Api.UpdateMemberAsync(member.Id, active: true)));
     });
 
-    private string RoleName(TeamRole role) => role switch
-    {
-        TeamRole.Owner => T("roleOwner"),
-        TeamRole.Staff => T("roleStaff"),
-        _ => T("roleViewer")
-    };
-
-    private static string RoleClass(TeamRole role) => role switch
-    {
-        TeamRole.Owner => "owner",
-        TeamRole.Viewer => "viewer",
-        _ => string.Empty
-    };
+    private string RoleOption(TeamRole role) => RoleText.Name(Books, role) + (RoleRules.IsAvailable(role) ? string.Empty : " (" + T("soon") + ")");
 }

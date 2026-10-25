@@ -1,0 +1,153 @@
+@page "/more/admin"
+@inherits KfComponent
+@inject ApiClient Api
+@inject ExportService Export
+
+<SettingsHeader Title="@T("adminPanel")" />
+
+@if (!Books.IsAdmin)
+{
+    <p class="notice">@T("err-admin-only")</p>
+}
+else
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("tileUsers")</h2>
+        <p class="muted" style="font-size:15px">@T("adminUsersHint")</p>
+        <a class="btn btn-outline" href="more/users"><Icon Name="people" Size="22" />@T("manageUsers")</a>
+    </section>
+
+    @if (Books.Settings.SignedIn)
+    {
+        <section class="card card-pad">
+            <h2 class="h3">@T("server")</h2>
+            @if (overview != null)
+            {
+                <div class="stat-grid">
+                    <div><b>@overview.Members</b><span>@T("tileUsers")</span></div>
+                    <div><b>@overview.Sessions</b><span>@T("devices")</span></div>
+                    <div><b>@overview.Events</b><span>@T("changes")</span></div>
+                </div>
+                @if (overview.LastChangeUtc is DateTime last)
+                {
+                    <p class="muted small">@T("lastChange"): @When(last)</p>
+                }
+            }
+            else
+            {
+                <p class="muted small">…</p>
+            }
+        </section>
+
+        <section class="card card-pad" style="gap:6px">
+            <h2 class="h3">@T("devices")</h2>
+            <p class="muted" style="font-size:15px">@T("devicesHint")</p>
+            @foreach (IGrouping<string, ApiDeviceSession> person in sessions.GroupBy(s => s.MemberId))
+            {
+                string memberId = person.Key;
+                ApiDeviceSession latest = person.First();
+                <div class="member">
+                    <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(latest.Name)</span>
+                    <span class="nm">@latest.Name<br /><span class="muted small">@person.Count() @T("devicesN") · @T("lastSeen") @When(latest.LastSeenUtc)</span></span>
+                    @if (memberId != Books.Settings.MemberId)
+                    {
+                        <button type="button" class="btn btn-ghost" style="height:44px;font-size:15px" disabled="@busy" @onclick="() => SignOutAsync(memberId, latest.Name)"><Icon Name="logout" Size="20" />@T("signOutEverywhere")</button>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="card card-pad" style="gap:0">
+            <h2 class="h3" style="margin-bottom:6px">@T("activity")</h2>
+            @foreach (ApiActivity row in activity.Take(shown))
+            {
+                <div class="activity">
+                    <b>@row.Name</b>
+                    <span>@KindText(row.Kind)</span>
+                    <span class="muted small">@When(row.AtUtc)</span>
+                </div>
+            }
+            @if (activity.Count > shown)
+            {
+                <button type="button" class="btn btn-ghost" style="margin-top:8px" @onclick="() => shown += 25">+ @(activity.Count - shown)</button>
+            }
+        </section>
+    }
+    else
+    {
+        <p class="notice">@T("adminLocal")</p>
+    }
+
+    <section class="card card-pad">
+        <h2 class="h3">@T("backup")</h2>
+        <p class="muted" style="font-size:15px">@T("backupHint")</p>
+        <button type="button" class="btn btn-outline" @onclick="Export.ExportBackupAsync"><Icon Name="download" Size="22" />@T("downloadBackup")</button>
+    </section>
+
+    @if (error.Length > 0)
+    {
+        <p class="err-text" style="text-align:start" role="alert">@error</p>
+    }
+}
+
+@code {
+    private ApiOverview? overview;
+    private List<ApiDeviceSession> sessions = new List<ApiDeviceSession>();
+    private List<ApiActivity> activity = new List<ApiActivity>();
+    private int shown = 25;
+    private bool busy;
+    private string error = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        if (Books.IsAdmin && Books.Settings.SignedIn)
+        {
+            await RunAsync(() => Task.CompletedTask);
+        }
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        busy = true;
+        error = string.Empty;
+        try
+        {
+            await action();
+            overview = await Api.AdminOverviewAsync();
+            sessions = await Api.AdminSessionsAsync();
+            activity = await Api.AdminActivityAsync(200);
+        }
+        catch (ApiException ex)
+        {
+            error = ErrorText.For(Books, ex.Code);
+        }
+        catch (HttpRequestException)
+        {
+            error = T("noConnection");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private Task SignOutAsync(string memberId, string name) => RunAsync(async () =>
+    {
+        await Api.AdminSignOutAsync(memberId);
+        Toasts.Show(T("signedOutEverywhere") + " · " + name);
+    });
+
+    private string When(DateTime utc)
+    {
+        DateTime local = utc.ToLocalTime();
+        return Books.DayLabel(DateOnly.FromDateTime(local)) + " " + local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private string KindText(string kind)
+    {
+        string key = "kind-" + kind;
+        string text = T(key);
+        return text == key ? kind : text;
+    }
+}

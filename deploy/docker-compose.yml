@@ -31,6 +31,8 @@ services:
     environment:
       ConnectionStrings__Kanaanflow: "Host=db;Database=kanaanflow;Username=kanaanflow"
       KF_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Needed to create new users. Empty means the built-in default (see docs/hosting-pi.md).
+      KF_MASTER_PASSWORD: ${KF_MASTER_PASSWORD:-}
     ports:
       - "127.0.0.1:18082:8080"
 

@@ -17,6 +17,7 @@ public static class BookProjector
         HashSet<string> voidedEntries = new HashSet<string>();
         HashSet<string> voidedLoans = new HashSet<string>();
         Dictionary<string, Entry> entries = new Dictionary<string, Entry>();
+        Dictionary<string, BookEvent> approvals = new Dictionary<string, BookEvent>();
 
         IEnumerable<BookEvent> ordered = events
             .OrderBy(e => e.AtUtc)
@@ -24,7 +25,28 @@ public static class BookProjector
 
         foreach (BookEvent bookEvent in ordered)
         {
-            Apply(book, entries, voidedEntries, voidedLoans, bookEvent.Change);
+            Apply(book, entries, voidedEntries, voidedLoans, bookEvent);
+            if (bookEvent.Change is EntryApproved approved && !approvals.ContainsKey(approved.EntryId))
+            {
+                approvals[approved.EntryId] = bookEvent;
+            }
+        }
+
+        // An entry stamped before its author joined (a device clock running behind): go by the author's role now.
+        foreach (Entry early in entries.Values.Where(e => !e.NeedsApproval && e.CreatedBy.Length > 0 && !e.AuthorKnown))
+        {
+            TeamMember? author = book.FindMember(early.CreatedBy);
+            early.NeedsApproval = author != null && RoleRules.NeedsApproval(author.Role);
+        }
+
+        // Applied last, so an approval that synced before its entry still counts. The first approval wins.
+        foreach ((string entryId, BookEvent approval) in approvals)
+        {
+            if (entries.TryGetValue(entryId, out Entry? approvedEntry) && approvedEntry.NeedsApproval)
+            {
+                approvedEntry.ApprovedBy = approval.Actor;
+                approvedEntry.ApprovedUtc = approval.AtUtc;
+            }
         }
 
         book.Entries.AddRange(entries.Values.Where(e => !voidedEntries.Contains(e.Id) && (e.LoanId == null || !voidedLoans.Contains(e.LoanId))));
@@ -37,9 +59,9 @@ public static class BookProjector
         Dictionary<string, Entry> entries,
         HashSet<string> voidedEntries,
         HashSet<string> voidedLoans,
-        BookChange change)
+        BookEvent bookEvent)
     {
-        switch (change)
+        switch (bookEvent.Change)
         {
             case EntryRecorded recorded:
                 Entry entry = recorded.Entry.Clone();
@@ -47,6 +69,18 @@ public static class BookProjector
                 {
                     entry.CategoryId = EntryCategory.OtherId;
                 }
+
+                // Who recorded it is whoever made the change (the server checks this), whatever the entry itself says.
+                if (bookEvent.Actor.Length > 0)
+                {
+                    entry.CreatedBy = bookEvent.Actor;
+                }
+
+                TeamMember? author = book.FindMember(entry.CreatedBy);
+                entry.AuthorKnown = author != null;
+                entry.NeedsApproval = author != null && RoleRules.NeedsApproval(author.Role);
+                entry.ApprovedBy = null;
+                entry.ApprovedUtc = null;
 
                 entries[entry.Id] = entry;
 
@@ -112,11 +146,20 @@ public static class BookProjector
                 break;
 
             case MemberSaved memberSaved:
-                Upsert(book.Members, memberSaved.Member, m => m.Id);
+                TeamMember savedMember = memberSaved.Member.Clone();
+                savedMember.Active = true;
+                Upsert(book.Members, savedMember, m => m.Id);
                 break;
 
             case MemberRemoved memberRemoved:
-                book.Members.RemoveAll(m => m.Id == memberRemoved.MemberId);
+                int memberIndex = book.Members.FindIndex(m => m.Id == memberRemoved.MemberId);
+                if (memberIndex >= 0)
+                {
+                    TeamMember removed = book.Members[memberIndex].Clone();
+                    removed.Active = false;
+                    book.Members[memberIndex] = removed;
+                }
+
                 break;
         }
     }

@@ -47,11 +47,32 @@ public sealed class BookService
 
     public int PendingCount => unsynced.Count;
 
+    /// <summary>The app is only usable while someone is logged in: signed in to the team server, or on a device-only book.</summary>
+    public bool IsLoggedIn => Settings.SetupDone && Settings.MemberId.Length > 0 && (Settings.SignedIn || Settings.LocalOnly);
+
     public TeamMember? Me => Book.FindMember(Settings.MemberId);
 
-    public bool CanRecord => Me == null || Me.CanRecord;
+    /// <summary>The logged-in member's role: from the synced team list, or what the server said at sign-in.</summary>
+    public TeamRole MyRole => Me?.Role ?? Settings.Role;
 
-    public bool CanManage => Me == null || Me.CanManage;
+    public string MyName => Me?.Name ?? Settings.LocalAccounts.FirstOrDefault(a => a.MemberId == Settings.MemberId)?.Name ?? string.Empty;
+
+    public bool CanRecord => IsLoggedIn && RoleRules.CanRecord(MyRole);
+
+    public bool CanManageBook => IsLoggedIn && RoleRules.CanManageBook(MyRole);
+
+    public bool CanManageMembers => IsLoggedIn && RoleRules.CanManageMembers(MyRole);
+
+    public bool CanApprove => IsLoggedIn && RoleRules.CanApprove(MyRole);
+
+    public bool IsAdmin => IsLoggedIn && MyRole == TeamRole.Admin;
+
+    /// <summary>Name of the team member with this id ("—" when unknown).</summary>
+    public string MemberName(string? id)
+    {
+        TeamMember? member = Book.FindMember(id);
+        return member != null && member.Name.Length > 0 ? member.Name : "—";
+    }
 
     public string T(string key)
     {
@@ -102,7 +123,111 @@ public sealed class BookService
         }
 
         Rebuild();
+        await UpgradeSettingsAsync();
         _ = store.RequestPersistenceAsync().AsTask();
+    }
+
+    /// <summary>Remembers who is logged in on this device.</summary>
+    public async Task LogInAsync(string memberId, TeamRole role, bool localOnly)
+    {
+        Settings.MemberId = memberId;
+        Settings.Role = role;
+        Settings.LocalOnly = localOnly;
+        Settings.SetupDone = true;
+        await SaveSettingsAsync();
+    }
+
+    /// <summary>Forgets who is logged in. The book stays on the device; unsynced changes wait for their author.</summary>
+    public async Task LogOutAsync()
+    {
+        Settings.Token = string.Empty;
+        Settings.MemberId = string.Empty;
+        Settings.Role = TeamRole.Viewer;
+        Settings.SetupDone = false;
+        await SaveSettingsAsync();
+    }
+
+    /// <summary>Unsynced changes made by the logged-in member.</summary>
+    public IReadOnlyList<BookEvent> MyUnsyncedEvents()
+    {
+        return UnsyncedEvents().Where(e => e.Actor == Settings.MemberId).ToList();
+    }
+
+    /// <summary>
+    /// Unsynced changes made by someone the team server doesn't know (a device-only user, before signing in to the team).
+    /// Changes by other team members are left alone: they upload when that person logs in again.
+    /// </summary>
+    public IReadOnlyList<BookEvent> ForeignUnsyncedEvents()
+    {
+        HashSet<string> teamMembers = events.Values
+            .Where(e => !unsynced.Contains(e.Id) && e.Change is MemberSaved)
+            .Select(e => ((MemberSaved)e.Change).Member.Id)
+            .ToHashSet();
+
+        return UnsyncedEvents()
+            .Where(e => e.Change is not MemberSaved and not MemberRemoved && e.Actor != Settings.MemberId && !teamMembers.Contains(e.Actor))
+            .ToList();
+    }
+
+    /// <summary>Makes unsynced changes the logged-in member's own, so they can upload under their name.</summary>
+    public async Task ClaimUnsyncedAsync(IReadOnlyList<string> ids)
+    {
+        List<StoredEvent> rows = new List<StoredEvent>();
+        foreach (string id in ids.Where(unsynced.Contains))
+        {
+            BookEvent bookEvent = events[id];
+            bookEvent.Actor = Settings.MemberId;
+            if (bookEvent.Change is EntryRecorded recorded)
+            {
+                recorded.Entry.CreatedBy = Settings.MemberId;
+            }
+
+            rows.Add(new StoredEvent { Id = id, Json = BookJsonContext.Serialize(bookEvent), Synced = false });
+        }
+
+        if (rows.Count > 0)
+        {
+            await store.PutEventsAsync(rows);
+            Rebuild();
+            Changed?.Invoke();
+        }
+    }
+
+    private async Task UpgradeSettingsAsync()
+    {
+        if (Settings.Version >= 1)
+        {
+            return;
+        }
+
+        // Before log-in existed: a device that was set up stays logged in. Without a server it is a device-only
+        // book whose user becomes its Admin; the first password they log in with becomes theirs.
+        if (Settings.SetupDone && Settings.MemberId.Length > 0)
+        {
+            if (Settings.SignedIn)
+            {
+                Settings.Role = Me?.Role ?? TeamRole.Viewer;
+            }
+            else
+            {
+                Settings.LocalOnly = true;
+                Settings.Role = TeamRole.Admin;
+                Settings.LocalAccounts.Add(new LocalAccount { MemberId = Settings.MemberId, Name = Me?.Name ?? string.Empty });
+                if (Me != null && Me.Role != TeamRole.Admin)
+                {
+                    TeamMember admin = Me.Clone();
+                    admin.Role = TeamRole.Admin;
+                    await RecordAsync(new MemberSaved { Member = admin });
+                }
+            }
+        }
+        else
+        {
+            Settings.SetupDone = false;
+        }
+
+        Settings.Version = 1;
+        await SaveSettingsAsync();
     }
 
     /// <summary>Appends changes to the log as one step and returns the ids of the new events.</summary>
@@ -164,6 +289,12 @@ public sealed class BookService
         }
 
         return rows.Count;
+    }
+
+    /// <summary>The whole event log as a JSON array, oldest first.</summary>
+    public string ExportEventsJson()
+    {
+        return "[" + string.Join(",", events.Values.OrderBy(e => e.AtUtc).ThenBy(e => e.Id, StringComparer.Ordinal).Select(BookJsonContext.Serialize)) + "]";
     }
 
     public IReadOnlyList<BookEvent> UnsyncedEvents()

@@ -7,7 +7,8 @@
         <span class="row-ic fx"><Icon Name="fx" Size="22" Stroke="2.2" /></span>
         <span class="row-main">
             <span class="row-title">@T("exchanged")</span>
-            <span class="row-sub"><span class="ltr">@Fmt.Money(Entry.Amount) @Sym(Entry.Currency) → @Fmt.Money(Entry.ToAmount) @Sym(Entry.ToCurrency)</span> · @When</span>
+            <span class="row-sub"><span class="ltr">@Fmt.Money(Entry.Amount) @Sym(Entry.Currency) → @Fmt.Money(Entry.ToAmount) @Sym(Entry.ToCurrency)</span> · @When · @By</span>
+            <ApprovalLine Entry="Entry" />
         </span>
     }
     else
@@ -17,6 +18,7 @@
         <span class="row-main">
             <span class="row-title">@Title</span>
             <span class="row-sub">@Sub</span>
+            <ApprovalLine Entry="Entry" />
         </span>
         <Money Class="@(isIn ? "c-in" : "c-out")" Text="@Fmt.Signed(Entry.Amount, isIn)" Symbol="@Sym(Entry.Currency)" />
         <span class="sr-only">@(isIn ? T("received") : T("paid"))</span>
@@ -34,6 +36,8 @@
     /// <summary>In a contact's history the contact is known, so the title is the entry type.</summary>
     [Parameter]
     public bool ForContact { get; set; }
+
+    private string By => T("by") + " " + Books.MemberName(Entry.CreatedBy);
 
     private string When => WithDate || Entry.Time.Length == 0 ? Books.DayLabel(Entry.Date) : Entry.Time;
 
@@ -61,6 +65,7 @@
             }
 
             parts.Add(When);
+            parts.Add(By);
             if (Entry.Note.Length > 0)
             {
                 parts.Add(Entry.Note);

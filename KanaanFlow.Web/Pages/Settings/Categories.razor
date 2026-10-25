@@ -1,0 +1,99 @@
+@page "/more/categories"
+@inherits KfComponent
+
+<SettingsHeader Title="@T("tileCategories")" />
+
+@if (Books.CanManageBook)
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("manageCats")</h2>
+        <p class="muted" style="font-size:15px">@T("catsIntro")</p>
+        @foreach (EntryCategory category in Book.EntryCategories)
+        {
+            EntryCategory c = category;
+            <div class="cat-edit">
+                <input class="input" value="@c.Name(Lang)" aria-label="@c.Name(Lang)" @onchange="e => RenameAsync(c, e.Value?.ToString())" />
+                @if (!c.IsLocked)
+                {
+                    <select class="kind" aria-label="@T("typeCol")" value="@c.Kind" @onchange="e => SetKindAsync(c, e.Value?.ToString())">
+                        <option value="@CategoryKind.In">@T("kIn")</option>
+                        <option value="@CategoryKind.Out">@T("kOut")</option>
+                        <option value="@CategoryKind.Both">@T("kBoth")</option>
+                    </select>
+                    <button type="button" class="icon-btn" aria-label="@T("delete") @c.Name(Lang)" @onclick="() => RemoveAsync(c)"><Icon Name="trash" Size="22" /></button>
+                }
+            </div>
+        }
+        <div style="display:flex;gap:8px">
+            <input class="input" style="height:52px;font-size:17px" type="text" @bind="newName" placeholder="@T("addCatPh")" aria-label="@T("addCatPh")" />
+            <button type="button" class="btn btn-primary" @onclick="AddAsync">@T("add")</button>
+        </div>
+    </section>
+}
+else
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("manageCats")</h2>
+        <div class="wrap">
+            @foreach (EntryCategory category in Book.EntryCategories)
+            {
+                <span class="tag" style="padding:8px 14px;border-radius:20px;font-size:16px">@category.Name(Lang)</span>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private string newName = string.Empty;
+
+    private Task RenameAsync(EntryCategory category, string? text)
+    {
+        string name = (text ?? string.Empty).Trim();
+        if (name.Length == 0 || name == category.Name(Lang))
+        {
+            return Task.CompletedTask;
+        }
+
+        EntryCategory updated = new EntryCategory
+        {
+            Id = category.Id,
+            Kind = category.Kind,
+            NameAr = Lang == "ar" ? name : category.NameAr,
+            NameEn = Lang == "en" ? name : category.NameEn
+        };
+        return Books.RecordAsync(new EntryCategorySaved { Category = updated });
+    }
+
+    private Task SetKindAsync(EntryCategory category, string? value)
+    {
+        if (!Enum.TryParse(value, out CategoryKind kind) || kind == category.Kind)
+        {
+            return Task.CompletedTask;
+        }
+
+        EntryCategory updated = new EntryCategory { Id = category.Id, Kind = kind, NameAr = category.NameAr, NameEn = category.NameEn };
+        return Books.RecordAsync(new EntryCategorySaved { Category = updated });
+    }
+
+    private async Task RemoveAsync(EntryCategory category)
+    {
+        await Books.RecordAsync(new EntryCategoryRemoved { CategoryId = category.Id });
+        Toasts.Show(T("deleteDone") + " · " + category.Name(Lang), undo: () => Books.RecordAsync(new EntryCategorySaved { Category = category }));
+    }
+
+    private async Task AddAsync()
+    {
+        string name = newName.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Books.RecordAsync(new EntryCategorySaved
+        {
+            Category = new EntryCategory { Id = BookService.NewId(), NameAr = name, NameEn = name, Kind = CategoryKind.Both }
+        });
+        newName = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+}

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.RateLimiting;
@@ -36,6 +38,9 @@ builder.Services.AddRateLimiter(o =>
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
 });
 
+// Creating a new user needs this password. Set KF_MASTER_PASSWORD on the server to change it.
+string masterPassword = builder.Configuration["KF_MASTER_PASSWORD"] is { Length: > 0 } configured ? configured : "WelcomeToKanaanFlow";
+
 WebApplication app = builder.Build();
 await app.Services.GetRequiredService<SyncStore>().MigrateAsync();
 app.UseRateLimiter();
@@ -51,17 +56,22 @@ api.MapGet("/health", async (NpgsqlDataSource db) =>
 
 api.MapGet("/status", async (SyncStore store) => Results.Ok(new StatusResponse(await store.IsReadyAsync())));
 
-// First start: the first person to set up becomes the owner. Only works while the book has no members.
-api.MapPost("/setup", async (SetupRequest request, SyncStore store) =>
+// Creating a new user needs the master password. New users are Admins.
+api.MapPost("/register", async (RegisterRequest request, SyncStore store) =>
 {
+    if (!SameText(request.MasterPassword, masterPassword))
+    {
+        return Error("wrong-master-password", StatusCodes.Status403Forbidden);
+    }
+
     string? problem = CheckName(request.Name) ?? CheckPassword(request.Password);
     if (problem != null)
     {
         return Error(problem);
     }
 
-    SessionResponse? session = await store.SetupAsync(request.Name, request.Password, request.MemberId);
-    return session == null ? Error("already-set-up", StatusCodes.Status409Conflict) : Results.Ok(session);
+    SessionResponse? session = await store.RegisterAsync(request.Name, request.Password, request.MemberId);
+    return session == null ? Error("name-taken", StatusCodes.Status409Conflict) : Results.Ok(session);
 }).RequireRateLimiting("signin");
 
 api.MapPost("/login", async (LoginRequest request, SyncStore store) =>
@@ -119,15 +129,16 @@ api.MapPost("/members", async (CreateMemberRequest request, HttpContext context,
         return Unauthorized();
     }
 
-    if (me.Role != nameof(TeamRole.Owner))
-    {
-        return Error("owner-only", StatusCodes.Status403Forbidden);
-    }
-
     string? problem = CheckName(request.Name) ?? CheckRole(request.Role) ?? CheckPassword(request.Password);
     if (problem != null)
     {
         return Error(problem);
+    }
+
+    string? denied = CheckAssign(me, request.Role);
+    if (denied != null)
+    {
+        return Error(denied, StatusCodes.Status403Forbidden);
     }
 
     MemberDto? created = await store.CreateMemberAsync(request.Name, Enum.Parse<TeamRole>(request.Role), request.Password, me.Id);
@@ -142,15 +153,23 @@ api.MapPatch("/members/{id}", async (string id, UpdateMemberRequest request, Htt
         return Unauthorized();
     }
 
-    if (me.Role != nameof(TeamRole.Owner))
-    {
-        return Error("owner-only", StatusCodes.Status403Forbidden);
-    }
-
     string? problem = (request.Role != null ? CheckRole(request.Role) : null) ?? (request.Password != null ? CheckPassword(request.Password) : null);
     if (problem != null)
     {
         return Error(problem);
+    }
+
+    // Admins can always change anyone, passwords included. Owners and Accountants can't touch Admins.
+    string? targetRole = await store.RoleOfAsync(id);
+    if (targetRole == null)
+    {
+        return Error("not-found", StatusCodes.Status404NotFound);
+    }
+
+    string? denied = CheckEdit(me, targetRole) ?? (request.Role != null && request.Role != targetRole ? CheckAssign(me, request.Role) : null);
+    if (denied != null)
+    {
+        return Error(denied, StatusCodes.Status403Forbidden);
     }
 
     string? failure = await store.UpdateMemberAsync(id, request, me.Id);
@@ -160,6 +179,43 @@ api.MapPatch("/members/{id}", async (string id, UpdateMemberRequest request, Htt
         "not-found" => Error(failure, StatusCodes.Status404NotFound),
         _ => Error(failure, StatusCodes.Status409Conflict)
     };
+});
+
+// The admin panel: only Admins.
+RouteGroupBuilder admin = api.MapGroup("/admin");
+
+admin.MapGet("/overview", async (HttpContext context, SyncStore store) =>
+{
+    MemberDto? me = await SignedIn(context, store);
+    return me == null ? Unauthorized() : !IsAdmin(me) ? AdminOnly() : Results.Ok(await store.OverviewAsync());
+});
+
+admin.MapGet("/sessions", async (HttpContext context, SyncStore store) =>
+{
+    MemberDto? me = await SignedIn(context, store);
+    return me == null ? Unauthorized() : !IsAdmin(me) ? AdminOnly() : Results.Ok(await store.SessionsAsync());
+});
+
+admin.MapPost("/members/{id}/signout", async (string id, HttpContext context, SyncStore store) =>
+{
+    MemberDto? me = await SignedIn(context, store);
+    if (me == null)
+    {
+        return Unauthorized();
+    }
+
+    if (!IsAdmin(me))
+    {
+        return AdminOnly();
+    }
+
+    return id == me.Id ? Error("cannot-remove-self", StatusCodes.Status409Conflict) : Results.Ok(new { ended = await store.SignOutEverywhereAsync(id) });
+});
+
+admin.MapGet("/activity", async (int? limit, HttpContext context, SyncStore store) =>
+{
+    MemberDto? me = await SignedIn(context, store);
+    return me == null ? Unauthorized() : !IsAdmin(me) ? AdminOnly() : Results.Ok(await store.ActivityAsync(limit ?? 100));
 });
 
 // Download: everything after the last sequence number the device has.
@@ -272,6 +328,47 @@ static string? CheckRole(string? role)
 {
     return Enum.TryParse(role, out TeamRole _) && Enum.IsDefined(Enum.Parse<TeamRole>(role!)) ? null : "invalid-role";
 }
+
+static TeamRole RoleOf(MemberDto member) => Enum.TryParse(member.Role, out TeamRole role) ? role : TeamRole.Viewer;
+
+static bool IsAdmin(MemberDto member) => RoleOf(member) == TeamRole.Admin;
+
+static string? CheckAssign(MemberDto me, string role)
+{
+    TeamRole actor = RoleOf(me);
+    TeamRole wanted = Enum.Parse<TeamRole>(role);
+    if (!RoleRules.CanManageMembers(actor))
+    {
+        return "owner-only";
+    }
+
+    if (!RoleRules.IsAvailable(wanted))
+    {
+        return "role-unavailable";
+    }
+
+    return RoleRules.CanAssign(actor, wanted) ? null : "cannot-manage-admin";
+}
+
+static string? CheckEdit(MemberDto me, string targetRole)
+{
+    TeamRole actor = RoleOf(me);
+    if (!RoleRules.CanManageMembers(actor))
+    {
+        return "owner-only";
+    }
+
+    return RoleRules.CanEdit(actor, Enum.TryParse(targetRole, out TeamRole target) ? target : TeamRole.Viewer) ? null : "cannot-manage-admin";
+}
+
+static bool SameText(string? given, string expected)
+{
+    byte[] a = SHA256.HashData(Encoding.UTF8.GetBytes(given ?? string.Empty));
+    byte[] b = SHA256.HashData(Encoding.UTF8.GetBytes(expected));
+    return CryptographicOperations.FixedTimeEquals(a, b);
+}
+
+static IResult AdminOnly() => Error("admin-only", StatusCodes.Status403Forbidden);
 
 static IResult Error(string code, int status = StatusCodes.Status400BadRequest) => Results.Json(new ErrorResponse(code), statusCode: status);
 
