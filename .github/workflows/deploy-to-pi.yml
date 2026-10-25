@@ -59,7 +59,7 @@ jobs:
         run: |
           sudo docker compose -f deploy/docker-compose.yml --env-file /etc/kanaanflow/db.env up -d --build --remove-orphans
           for i in $(seq 1 60); do
-            if curl -fsS -o /dev/null http://127.0.0.1:8082/api/health; then echo "Sync service is up"; exit 0; fi
+            if curl -fsS -o /dev/null http://127.0.0.1:18082/api/health; then echo "Sync service is up"; exit 0; fi
             sleep 2
           done
           sudo docker compose -f deploy/docker-compose.yml logs --tail 50

@@ -1,6 +1,6 @@
 # KanaanFlow sync service and its Postgres database on the Raspberry Pi.
 # Started by .github/workflows/deploy-to-pi.yml with: docker compose --env-file /etc/kanaanflow/db.env up -d
-# The database is only reachable inside Docker; the API only on 127.0.0.1:8082, behind nginx (/api).
+# The database is only reachable inside Docker; the API only on 127.0.0.1:18082, behind nginx (/api).
 name: kanaanflow
 
 services:
@@ -32,7 +32,7 @@ services:
       ConnectionStrings__Kanaanflow: "Host=db;Database=kanaanflow;Username=kanaanflow"
       KF_DB_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "127.0.0.1:8082:8080"
+      - "127.0.0.1:18082:8080"
 
 volumes:
   pgdata:

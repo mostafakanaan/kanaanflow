@@ -64,7 +64,7 @@ After a deploy, an installed app picks up the new version the next time it is fu
 Every deploy also starts two Docker containers (`deploy/docker-compose.yml`):
 
 - **kanaanflow-db**: PostgreSQL 17. Only reachable inside Docker; its data lives in the `kanaanflow_pgdata` volume.
-- **kanaanflow-sync**: the sync API (`KanaanFlow.Sync`) on `127.0.0.1:8082`, which nginx serves at `/api/`.
+- **kanaanflow-sync**: the sync API (`KanaanFlow.Sync`) on `127.0.0.1:18082`, which nginx serves at `/api/`.
 
 The first deploy installs Docker if it's missing and creates a random database password in
 `/etc/kanaanflow/db.env`. It stays on the Pi; never delete that file, or the database can't be opened.
@@ -105,5 +105,5 @@ sudo docker exec -i kanaanflow-db pg_restore -U kanaanflow -d kanaanflow --clean
 ```bash
 sudo docker compose -p kanaanflow ps          # are both containers up?
 sudo docker logs kanaanflow-sync --tail 50    # sync service log
-curl http://127.0.0.1:8082/api/health         # {"status":"ok"}
+curl http://127.0.0.1:18082/api/health         # {"status":"ok"}
 ```
