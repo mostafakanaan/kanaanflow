@@ -132,7 +132,12 @@ public sealed class ExportService
 
     private async Task SaveAsync(string name, string mime, byte[] bytes)
     {
-        await js.InvokeVoidAsync("kf.download", name, mime, bytes);
+        if (!await js.InvokeAsync<bool>("kf.download", name, mime, bytes))
+        {
+            toasts.Show(book.T("saveFailed"));
+            return;
+        }
+
         bool canShare = await js.InvokeAsync<bool>("kf.canShareFiles");
         toasts.Show(
             book.T("fileReady") + ": " + name,

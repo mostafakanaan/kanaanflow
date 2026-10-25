@@ -25,7 +25,7 @@
 
 <section class="section" style="gap:8px">
     <h2 class="h3">2. @T("pickPerson")</h2>
-    <SearchPicker ContactId="@pickContact" CategoryId="@PickedCategory" OnChange="OnPick" />
+    <SearchPicker ContactId="@pickContact" CategoryId="@(peopleCats.Count == 1 ? peopleCats.First() : null)" Summary="@(peopleCats.Count > 1 ? T("groupsN", peopleCats.Count) : null)" OnChange="OnPick" />
 
     <button type="button" class="adv-toggle" aria-expanded="@(advanced ? "true" : "false")" @onclick="() => advanced = !advanced">
         <Icon Name="settings" Size="20" />
@@ -51,11 +51,11 @@
             </div>
             <h3 class="h3">@T("pcatFilter")</h3>
             <div class="wrap">
-                <button type="button" class="sel chip" aria-pressed="@(peopleCats.Count == 0 ? "true" : "false")" @onclick="() => peopleCats.Clear()">@T("allCats")</button>
+                <button type="button" class="sel chip" aria-pressed="@(peopleCats.Count == 0 ? "true" : "false")" @onclick="() => TogglePeople(null)">@T("allCats")</button>
                 @foreach (PeopleCategory category in Book.PeopleCategories)
                 {
                     string id = category.Id;
-                    <button type="button" class="sel chip" aria-pressed="@(peopleCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(peopleCats, id)">@category.Name(Lang)</button>
+                    <button type="button" class="sel chip" aria-pressed="@(peopleCats.Contains(id) ? "true" : "false")" @onclick="() => TogglePeople(id)">@category.Name(Lang)</button>
                 }
             </div>
             <label class="field">@T("recordedBy")
@@ -135,7 +135,6 @@
     private readonly HashSet<string> peopleCats = new HashSet<string>();
     private readonly HashSet<string> entryCats = new HashSet<string>();
     private string? pickContact;
-    private string? pickCategory;
     private bool advanced;
     private string createdBy = string.Empty;
     private ApprovalFilter approval = ApprovalFilter.All;
@@ -198,31 +197,41 @@
         return filter;
     }
 
-    /// <summary>How many filters under "Advanced filtering" are on.</summary>
-    private int AdvancedCount => (entryCats.Count > 0 ? 1 : 0) + (peopleCats.Count > 0 && PickedCategory == null ? 1 : 0) + (createdBy.Length > 0 ? 1 : 0) + (approval != ApprovalFilter.All ? 1 : 0);
+    /// <summary>How many filters under "Advanced filtering" are on (a single group is the picker's entity).</summary>
+    private int AdvancedCount => (entryCats.Count > 0 ? 1 : 0) + (peopleCats.Count > 1 ? 1 : 0) + (createdBy.Length > 0 ? 1 : 0) + (approval != ApprovalFilter.All ? 1 : 0);
 
-    /// <summary>The entity picked above: it is the one people-category filter (choosing others under Advanced replaces it).</summary>
-    private string? PickedCategory => peopleCats.Count == 1 && peopleCats.Contains(pickCategory ?? string.Empty) ? pickCategory : null;
-
+    /// <summary>
+    /// The picker chooses one person, one entity, or everyone. An entity is the same people-category filter as under
+    /// Advanced filtering, so the two always agree, and a person is never combined with a group filter.
+    /// </summary>
     private void OnPick((string? ContactId, string? CategoryId) pick)
     {
-        if (PickedCategory != null || pick.CategoryId != null)
+        pickContact = pick.ContactId;
+        peopleCats.Clear();
+        if (pick.CategoryId != null)
+        {
+            peopleCats.Add(pick.CategoryId);
+        }
+    }
+
+    /// <summary>Groups chosen under Advanced filtering replace a picked person (null chooses all groups).</summary>
+    private void TogglePeople(string? id)
+    {
+        pickContact = null;
+        if (id == null)
         {
             peopleCats.Clear();
         }
-
-        pickContact = pick.ContactId;
-        pickCategory = pick.CategoryId;
-        if (pickCategory != null)
+        else
         {
-            peopleCats.Add(pickCategory);
+            Toggle(peopleCats, id);
         }
     }
 
     private void ClearAdvanced()
     {
         entryCats.Clear();
-        if (PickedCategory == null)
+        if (peopleCats.Count > 1)
         {
             peopleCats.Clear();
         }

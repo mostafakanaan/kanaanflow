@@ -14,10 +14,10 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Shows the KanaanFlow web app full-screen. Everything (offline storage, sync, log-in) is the web app's own;
@@ -29,7 +29,13 @@ public final class MainActivity extends Activity {
 
     private static final String APP_HOST = Uri.parse(APP_URL).getHost();
 
+    /** Exported files older than this are removed the next time something is exported. */
+    private static final long KEEP_EXPORTS_MS = TimeUnit.DAYS.toMillis(1);
+
     private WebView web;
+
+    /** True while the "no internet" page is showing, so the app's first real page can drop it from history. */
+    private boolean showingOffline;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,22 +114,34 @@ public final class MainActivity extends Activity {
         public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
             // Only the first load can fail this way: once loaded, the app works offline by itself.
             if (request.isForMainFrame()) {
+                showingOffline = true;
                 view.loadDataWithBaseURL(null, OfflinePage.HTML, "text/html", "utf-8", null);
+            }
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            // Back from the app must leave it, not return to the "no internet" page.
+            if (showingOffline && url != null && isAppUrl(Uri.parse(url))) {
+                showingOffline = false;
+                view.clearHistory();
             }
         }
     }
 
     /** Called from the web app's kf.js (window.KanaanFlowAndroid). */
     private final class Bridge {
+        /** Saves an exported file and offers it to other apps. Returns false when it could not be saved. */
         @JavascriptInterface
-        public void saveFile(String name, String mime, String base64) {
+        public boolean saveFile(String name, String mime, String base64) {
             try {
                 File folder = new File(getCacheDir(), SharedFileProvider.FOLDER);
                 if (!folder.exists() && !folder.mkdirs()) {
                     throw new IOException("Could not create " + folder);
                 }
 
-                String safeName = new File(name).getName();
+                removeOldExports(folder);
+                String safeName = SharedFileProvider.safeName(name);
                 File file = new File(folder, safeName);
                 try (FileOutputStream out = new FileOutputStream(file)) {
                     out.write(Base64.decode(base64, Base64.DEFAULT));
@@ -136,13 +154,21 @@ public final class MainActivity extends Activity {
                 send.putExtra(Intent.EXTRA_SUBJECT, safeName);
                 send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 startActivity(Intent.createChooser(send, safeName));
-            } catch (IOException | IllegalArgumentException e) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "Could not save the file", Toast.LENGTH_LONG).show();
+                return true;
+            } catch (IOException | IllegalArgumentException | ActivityNotFoundException e) {
+                return false;
+            }
+        }
+
+        private void removeOldExports(File folder) {
+            File[] files = folder.listFiles();
+            long cutoff = System.currentTimeMillis() - KEEP_EXPORTS_MS;
+            if (files != null) {
+                for (File old : files) {
+                    if (old.lastModified() < cutoff && !old.delete()) {
+                        old.deleteOnExit();
                     }
-                });
+                }
             }
         }
 

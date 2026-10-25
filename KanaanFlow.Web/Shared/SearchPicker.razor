@@ -15,6 +15,11 @@
 
 <Sheet Open="open" Title="@T("pickPerson")" OnClose="() => open = false">
     <input @ref="searchBox" class="input" type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPh")" aria-label="@T("searchPh")" autocomplete="off" />
+    @{
+        List<PeopleCategory> categories = Categories();
+        List<Contact> people = People();
+        Dictionary<string, int> sizes = Book.Contacts.GroupBy(c => c.CategoryId).ToDictionary(g => g.Key, g => g.Count());
+    }
     <div class="picker-list" role="listbox">
         @if (query.Trim().Length == 0)
         {
@@ -24,23 +29,23 @@
             </button>
         }
 
-        @if (Categories.Count > 0)
+        @if (categories.Count > 0)
         {
             <p class="picker-group">@T("entitiesGroup")</p>
-            @foreach (PeopleCategory category in Categories)
+            @foreach (PeopleCategory category in categories)
             {
                 string id = category.Id;
                 <button type="button" class="picker-item" role="option" aria-selected="@(CategoryId == id ? "true" : "false")" @onclick="() => ChooseAsync(null, id)">
                     <span class="avatar avatar-40" aria-hidden="true"><Icon Name="folder" Size="20" /></span>
-                    <span class="picker-text"><b>@category.Name(Lang)</b><span>@T("peopleCount").Replace("{0}", Book.Contacts.Count(c => c.CategoryId == id).ToString(System.Globalization.CultureInfo.InvariantCulture))</span></span>
+                    <span class="picker-text"><b>@category.Name(Lang)</b><span>@T("peopleCount", sizes.GetValueOrDefault(id))</span></span>
                 </button>
             }
         }
 
-        @if (People.Count > 0)
+        @if (people.Count > 0)
         {
             <p class="picker-group">@T("peopleGroup")</p>
-            @foreach (Contact contact in People)
+            @foreach (Contact contact in people)
             {
                 string id = contact.Id;
                 <button type="button" class="picker-item" role="option" aria-selected="@(ContactId == id ? "true" : "false")" @onclick="() => ChooseAsync(id, null)">
@@ -50,7 +55,7 @@
             }
         }
 
-        @if (Categories.Count == 0 && People.Count == 0)
+        @if (categories.Count == 0 && people.Count == 0)
         {
             <p class="empty">@T("noMatches")</p>
         }
@@ -73,15 +78,19 @@
     [Parameter]
     public EventCallback<(string? ContactId, string? CategoryId)> OnChange { get; set; }
 
-    private string? Chosen => ContactId != null ? Books.ContactName(ContactId) : CategoryId != null ? Books.PeopleCategoryName(CategoryId) : null;
+    /// <summary>Shown instead of the choice when several groups are chosen under Advanced filtering.</summary>
+    [Parameter]
+    public string? Summary { get; set; }
+
+    private string? Chosen => ContactId != null ? Books.ContactName(ContactId) : CategoryId != null ? Books.PeopleCategoryName(CategoryId) : Summary;
 
     private string Query => query.Trim();
 
     private bool Matches(string? text) => Query.Length == 0 || (text ?? string.Empty).Contains(Query, StringComparison.CurrentCultureIgnoreCase);
 
-    private List<PeopleCategory> Categories => Book.PeopleCategories.Where(c => Matches(c.Name(Lang))).ToList();
+    private List<PeopleCategory> Categories() => Book.PeopleCategories.Where(c => Matches(c.Name(Lang))).ToList();
 
-    private List<Contact> People => Book.Contacts
+    private List<Contact> People() => Book.Contacts
         .Where(c => Matches(c.Name) || Matches(c.Phone) || (Query.Length > 0 && Matches(Books.PeopleCategoryName(c.CategoryId))))
         .OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
         .ToList();

@@ -17,6 +17,12 @@ public final class SharedFileProvider extends ContentProvider {
 
     private static final String AUTHORITY = "de.mkanaan.kanaanflow.files";
 
+    /** A file name without folders or a leading dot, so it can always be served back by {@link #fileFor}. */
+    static String safeName(String name) {
+        String plain = new File(name == null ? "" : name).getName().replaceFirst("^\\.+", "");
+        return plain.isEmpty() ? "KanaanFlow-export" : plain;
+    }
+
     static Uri uriFor(String name) {
         return new Uri.Builder().scheme("content").authority(AUTHORITY).appendPath(name).build();
     }
@@ -47,8 +53,10 @@ public final class SharedFileProvider extends ContentProvider {
 
     @Override
     public String getType(Uri uri) {
+        // Not MimeTypeMap.getFileExtensionFromUrl: it gives up on spaces and Arabic letters in the name.
         String name = uri.getLastPathSegment();
-        String extension = name == null ? "" : MimeTypeMap.getFileExtensionFromUrl(name);
+        int dot = name == null ? -1 : name.lastIndexOf('.');
+        String extension = dot >= 0 ? name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT) : "";
         String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
         return type != null ? type : "application/octet-stream";
     }

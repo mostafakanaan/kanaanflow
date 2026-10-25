@@ -353,6 +353,8 @@ public static class Strings
         ["nothingPending"] = "لا توجد حركات بانتظار الموافقة",
         ["approvedN"] = "تمت الموافقة على {0} حركات",
         ["peopleCount"] = "عدد الأشخاص: {0}",
+        ["groupsN"] = "{0} فئات",
+        ["saveFailed"] = "تعذّر حفظ الملف",
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -680,5 +682,7 @@ public static class Strings
         ["nothingPending"] = "Nothing is waiting for approval",
         ["approvedN"] = "{0} entries approved",
         ["peopleCount"] = "{0} people",
+        ["groupsN"] = "{0} groups",
+        ["saveFailed"] = "Could not save the file",
     };
 }
