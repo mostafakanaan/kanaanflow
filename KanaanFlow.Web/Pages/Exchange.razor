@@ -1,0 +1,170 @@
+@page "/exchange"
+@layout FlowLayout
+@inherits KfComponent
+@inject RateService Rates
+
+<PageTitle>@T("exchange") · KanaanFlow</PageTitle>
+<div class="flow navy">
+    <div class="flow-head">
+        <button type="button" class="back" @onclick='() => Nav.NavigateTo("")'><Icon Name="back" Class="flip" Stroke="2.2" />@T("cancel")</button>
+        <h1 class="title" style="margin:0">@T("exchange")</h1>
+        <div class="step"></div>
+    </div>
+    <div class="flow-inner">
+        <div class="flow-body" style="gap:16px;padding-top:18px">
+            <p class="muted" style="font-size:16px;line-height:1.5">@T("fxNote")</p>
+            <section class="fx-give">
+                <label for="fxAmt">@T("fxGive")</label>
+                <input id="fxAmt" class="input input-big ltr" inputmode="decimal" @bind="amountText" @bind:event="oninput" placeholder="0" />
+                <div class="grid-4" style="gap:6px" role="group" aria-label="@T("fxGive")">
+                    @foreach (Currency c in Book.Currencies)
+                    {
+                        Currency pick = c;
+                        <button type="button" class="sel cur-chip-sm" aria-pressed="@(from == c ? "true" : "false")" @onclick="() => PickFromAsync(pick)">@Sym(c)</button>
+                    }
+                </div>
+            </section>
+            <section class="fx-get">
+                <span>@T("fxGet")</span>
+                <div class="grid-4" style="gap:6px" role="group" aria-label="@T("fxGet")">
+                    @foreach (Currency c in Book.Currencies)
+                    {
+                        Currency pick = c;
+                        <button type="button" class="sel cur-chip-sm" aria-pressed="@(to == c ? "true" : "false")" @onclick="() => PickToAsync(pick)">@Sym(c)</button>
+                    }
+                </div>
+                <div class="fx-result" aria-live="polite"><span class="n">@Fmt.Money(Result)</span><span class="s">@Sym(to)</span></div>
+            </section>
+            <section class="section" style="gap:8px">
+                <label for="fxRate" style="font-size:18px;font-weight:700">@T("rate") <span class="muted" style="font-weight:500;font-size:16px"><span class="ltr">1 @Sym(from) = @(rateText.Length > 0 ? rateText : "0") @Sym(to)</span></span></label>
+                <div style="display:flex;gap:8px">
+                    <input id="fxRate" class="input input-mid ltr" style="flex:1" inputmode="decimal" @bind="rateText" @bind:event="oninput" @bind:after="RateTyped" />
+                    <button type="button" class="btn btn-outline" style="height:56px;font-size:16px" disabled="@fetching" @onclick="FetchAsync">@T("fetchRate")</button>
+                </div>
+                <span class="muted" style="font-size:15px">@(rateSource == "manual" ? T("rateManual") : T("rateFetched") + " · " + RateService.SourceName)</span>
+            </section>
+            <p class="notice">@T("oldSyp")</p>
+            @if (error)
+            {
+                <p class="err-text" role="alert">@T("enterRate")</p>
+            }
+        </div>
+        <div class="flow-foot">
+            <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">@T("save")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Currency from = Currency.USD;
+    private Currency to = Currency.TRY;
+    private string amountText = string.Empty;
+    private string rateText = string.Empty;
+    private string rateSource = "manual";
+    private bool fetching;
+    private bool saving;
+    private bool error;
+
+    private decimal Result => (Fmt.ParseAmount(amountText) ?? 0m) * (Fmt.ParseAmount(rateText) ?? 0m);
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!Books.CanRecord)
+        {
+            Nav.NavigateTo("", replace: true);
+            return;
+        }
+
+        LoadLastRate();
+    }
+
+    private void RateTyped() => rateSource = "manual";
+
+    private Task PickFromAsync(Currency c)
+    {
+        if (c == to)
+        {
+            to = from;
+        }
+
+        from = c;
+        LoadLastRate();
+        return Task.CompletedTask;
+    }
+
+    private Task PickToAsync(Currency c)
+    {
+        if (c == from)
+        {
+            from = to;
+        }
+
+        to = c;
+        LoadLastRate();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Starts from the rate used last time for this pair, so repeat exchanges need no typing.</summary>
+    private void LoadLastRate()
+    {
+        Entry? last = Book.Entries.FirstOrDefault(e => e.Type == EntryType.Exchange && e.Currency == from && e.ToCurrency == to);
+        rateText = last != null ? last.Rate.ToString(System.Globalization.CultureInfo.InvariantCulture) : string.Empty;
+        rateSource = "manual";
+    }
+
+    private async Task FetchAsync()
+    {
+        fetching = true;
+        decimal? rate = await Rates.GetRateAsync(from, to);
+        fetching = false;
+        if (rate == null)
+        {
+            Toasts.Show(T("rateFailed"));
+            return;
+        }
+
+        rateText = rate.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        rateSource = "fetched";
+    }
+
+    private async Task SaveAsync()
+    {
+        decimal? amount = Fmt.ParseAmount(amountText);
+        decimal? rate = Fmt.ParseAmount(rateText);
+        if (amount == null || amount <= 0m || rate == null || rate <= 0m)
+        {
+            error = true;
+            return;
+        }
+
+        saving = true;
+        Entry entry = new Entry
+        {
+            Id = BookService.NewId(),
+            Type = EntryType.Exchange,
+            Amount = amount.Value,
+            Currency = from,
+            ToAmount = Math.Round(amount.Value * rate.Value, 2, MidpointRounding.AwayFromZero),
+            ToCurrency = to,
+            Rate = rate.Value,
+            RateSource = rateSource == "manual" ? "manual" : RateService.SourceName,
+            CategoryId = EntryCategory.OtherId,
+            Date = Today,
+            Time = DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            CreatedBy = Books.Settings.MemberId,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        await Books.RecordAsync(new EntryRecorded { Entry = entry });
+        string entryId = entry.Id;
+        Toasts.Show(
+            T("saved") + " · " + T("exchanged"),
+            undo: async () =>
+            {
+                await Books.RecordAsync(new EntryVoided { EntryId = entryId });
+                Toasts.Show(T("undone"));
+            });
+        Nav.NavigateTo("");
+    }
+}

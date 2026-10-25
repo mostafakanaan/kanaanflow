@@ -1,0 +1,291 @@
+@page "/add/{Kind}"
+@layout FlowLayout
+@inherits KfComponent
+
+<PageTitle>@FlowTitle · KanaanFlow</PageTitle>
+<div class="flow @(isIn ? "in" : "out")">
+    <div class="flow-head">
+        <button type="button" class="back" @onclick="Back"><Icon Name="back" Class="flip" Stroke="2.2" />@(step > 1 ? T("back") : T("cancel"))</button>
+        <h1 class="title" style="margin:0">@FlowTitle</h1>
+        <div class="step">@T("step") @step @T("of") 3</div>
+    </div>
+    <div class="flow-inner">
+        <div class="segs" aria-hidden="true">
+            <span class="on"></span><span class="@(step >= 2 ? "on" : null)"></span><span class="@(step >= 3 ? "on" : null)"></span>
+        </div>
+
+        @if (step == 1)
+        {
+            <div class="flow-body">
+                <h2 class="h2" style="font-size:22px">@T("howMuch")</h2>
+                <div class="amount-box @(error ? "err" : null)" aria-live="polite">
+                    <span class="n">@Fmt.Typing(amount)</span><span class="s">@Sym(currency)</span>
+                </div>
+                @if (error)
+                {
+                    <p class="err-text" role="alert">@T("enterAmount")</p>
+                }
+                <div class="grid-4" role="group" aria-label="@T("currency")">
+                    @foreach (Currency c in Book.Currencies)
+                    {
+                        Currency pick = c;
+                        <button type="button" class="sel cur-chip" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick">@Sym(c)<small>@Fmt.ShortName(c, Lang)</small></button>
+                    }
+                </div>
+                <div class="keypad">
+                    @foreach (string key in Keys)
+                    {
+                        string k = key;
+                        <button type="button" aria-label="@(k == "back" ? T("delete") : k)" @onclick="() => Press(k)">
+                            @if (k == "back")
+                            {
+                                <Icon Name="backspace" Size="28" />
+                            }
+                            else
+                            {
+                                @k
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+        else if (step == 2)
+        {
+            <div class="flow-body" style="gap:12px">
+                <div class="type-pill"><span>@FlowTitle</span><span class="ltr">@Fmt.Typing(amount)</span><span>@Sym(currency)</span></div>
+                <h2 class="h2" style="font-size:22px">@(isIn ? T("fromWho") : T("toWho"))</h2>
+                <label class="search">
+                    <Icon Name="search" Size="22" />
+                    <input type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPeople")" aria-label="@T("searchPeople")" />
+                </label>
+                <div class="pick-list">
+                    @if (query.Trim().Length == 0)
+                    {
+                        <button type="button" class="pick-person" aria-pressed="@(contactId == null ? "true" : "false")" @onclick="() => PickContact(null)">
+                            <span class="avatar" aria-hidden="true">—</span>
+                            <span class="row-main"><span class="person-name">@T("noPerson")</span><span class="person-sub">@T("noPersonSub")</span></span>
+                            @if (contactId == null)
+                            {
+                                <span class="c-navy"><Icon Name="check" Size="26" Stroke="2.6" /></span>
+                            }
+                        </button>
+                    }
+                    @foreach (Contact contact in Matches)
+                    {
+                        Contact c = contact;
+                        bool on = contactId == c.Id;
+                        <button type="button" class="pick-person" aria-pressed="@(on ? "true" : "false")" @onclick="() => PickContact(c.Id)">
+                            <span class="avatar" aria-hidden="true">@Fmt.Initial(c.Name)</span>
+                            <span class="row-main"><span class="person-name">@c.Name</span><span class="person-sub">@Books.PeopleCategoryName(c.CategoryId)</span></span>
+                            @if (on)
+                            {
+                                <span class="c-navy"><Icon Name="check" Size="26" Stroke="2.6" /></span>
+                            }
+                        </button>
+                    }
+                    @if (query.Trim().Length > 0 && !Matches.Any())
+                    {
+                        <p class="empty">@T("noMatch")</p>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="flow-body">
+                <div class="type-pill"><span>@FlowTitle</span><span class="ltr">@Fmt.Typing(amount)</span><span>@Sym(currency)</span>@if (contactId != null) { <span class="who">· @Books.ContactName(contactId)</span> }</div>
+                <h2 class="h2" style="font-size:22px">@T("whatFor")</h2>
+                <div class="grid-2">
+                    @foreach (EntryCategory category in Book.EntryCategories.Where(c => c.Fits(Type) && c.Id != EntryCategory.LoanId))
+                    {
+                        EntryCategory c = category;
+                        <button type="button" class="sel tile" style="height:56px;font-size:17px" aria-pressed="@(categoryId == c.Id ? "true" : "false")" @onclick="() => categoryId = c.Id">@c.Name(Lang)</button>
+                    }
+                </div>
+                <label class="field">@T("note")
+                    <input class="input" type="text" @bind="note" placeholder="@T("notePh")" />
+                </label>
+                <label class="field">@T("date")
+                    <input class="input" type="date" @bind="date" max="@Fmt.Iso(Today)" />
+                </label>
+            </div>
+        }
+
+        <div class="flow-foot">
+            <button type="button" class="btn" style="background:var(--accent);color:#fff" disabled="@saving" @onclick="NextAsync">
+                @if (step == 3)
+                {
+                    <Icon Name="check" Size="26" Stroke="2.6" />
+                }
+                @(step == 3 ? T("save") : T("next"))
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly string[] Keys = { "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back" };
+
+    private int step = 1;
+    private string amount = string.Empty;
+    private Currency currency = Currency.USD;
+    private string? contactId;
+    private string? categoryId;
+    private string note = string.Empty;
+    private DateOnly date;
+    private string query = string.Empty;
+    private bool error;
+    private bool saving;
+    private bool isIn;
+
+    [Parameter]
+    public string Kind { get; set; } = "in";
+
+    [SupplyParameterFromQuery(Name = "contact")]
+    public string? ContactParam { get; set; }
+
+    private EntryType Type => isIn ? EntryType.In : EntryType.Out;
+
+    private string FlowTitle => isIn ? T("received") : T("paid");
+
+    private IEnumerable<Contact> Matches
+    {
+        get
+        {
+            string q = query.Trim();
+            IEnumerable<Contact> list = Book.Contacts.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase);
+            return q.Length == 0 ? list : list.Where(c => c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase));
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        isIn = !string.Equals(Kind, "out", StringComparison.OrdinalIgnoreCase);
+        date = Today;
+        if (Enum.TryParse(Books.Settings.LastCurrency, out Currency last))
+        {
+            currency = last;
+        }
+
+        if (Book.FindContact(ContactParam) != null)
+        {
+            contactId = ContactParam;
+        }
+
+        if (!Books.CanRecord)
+        {
+            Nav.NavigateTo("", replace: true);
+        }
+    }
+
+    private void Press(string key)
+    {
+        error = false;
+        if (key == "back")
+        {
+            amount = amount.Length > 0 ? amount.Substring(0, amount.Length - 1) : amount;
+        }
+        else if (key == ".")
+        {
+            if (!amount.Contains('.'))
+            {
+                amount = (amount.Length == 0 ? "0" : amount) + ".";
+            }
+        }
+        else
+        {
+            int dot = amount.IndexOf('.');
+            bool tooManyDecimals = dot >= 0 && amount.Length - dot > 2;
+            if (amount.Replace(".", string.Empty).Length < 11 && !tooManyDecimals)
+            {
+                amount = amount == "0" ? key : amount + key;
+            }
+        }
+    }
+
+    private void PickContact(string? id)
+    {
+        contactId = id;
+    }
+
+    private void Back()
+    {
+        if (step > 1)
+        {
+            step--;
+        }
+        else
+        {
+            Leave();
+        }
+    }
+
+    private async Task NextAsync()
+    {
+        if (step == 1)
+        {
+            decimal? value = Fmt.ParseAmount(amount);
+            if (value == null || value <= 0m)
+            {
+                error = true;
+                return;
+            }
+
+            step = 2;
+        }
+        else if (step == 2)
+        {
+            step = 3;
+        }
+        else
+        {
+            await SaveAsync();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        decimal? value = Fmt.ParseAmount(amount);
+        if (value == null || value <= 0m || saving)
+        {
+            return;
+        }
+
+        saving = true;
+        DateOnly day = date > Today ? Today : date;
+        Entry entry = new Entry
+        {
+            Id = BookService.NewId(),
+            Type = Type,
+            Amount = value.Value,
+            Currency = currency,
+            ContactId = contactId,
+            CategoryId = categoryId ?? EntryCategory.OtherId,
+            Note = note.Trim(),
+            Date = day,
+            Time = day == Today ? DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture) : string.Empty,
+            CreatedBy = Books.Settings.MemberId,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        Books.Settings.LastCurrency = currency.ToString();
+        await Books.SaveSettingsAsync();
+        await Books.RecordAsync(new EntryRecorded { Entry = entry });
+        string entryId = entry.Id;
+        Toasts.Show(
+            T("saved") + " · " + FlowTitle + " " + Fmt.Money(entry.Amount) + " " + Sym(currency),
+            undo: async () =>
+            {
+                await Books.RecordAsync(new EntryVoided { EntryId = entryId });
+                Toasts.Show(T("undone"));
+            });
+        Leave();
+    }
+
+    private void Leave()
+    {
+        Nav.NavigateTo(ContactParam != null && Book.FindContact(ContactParam) != null ? "people/" + ContactParam : "");
+    }
+}

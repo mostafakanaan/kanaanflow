@@ -1,0 +1,65 @@
+@* Stroke icons from the design, drawn in the current text color. *@
+<svg class="@Class" width="@Size" height="@Size" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="@Stroke" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    @switch (Name)
+    {
+        case "in":
+            <path d="M12 4v11M6.5 10l5.5 5.5 5.5-5.5M5 20h14"></path>
+            break;
+        case "out":
+            <path d="M12 20V9M6.5 14l5.5-5.5 5.5 5.5M5 4h14"></path>
+            break;
+        case "fx":
+            <path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"></path>
+            break;
+        case "loan":
+            <circle cx="9" cy="9" r="5.5"></circle><path d="M15.6 6.8a5.5 5.5 0 1 1-6.9 8.4"></path>
+            break;
+        case "back":
+            <path d="M15 6l-6 6 6 6"></path>
+            break;
+        case "check":
+            <path d="M5 12l5 5 9-10"></path>
+            break;
+        case "plus":
+            <path d="M12 5v14M5 12h14"></path>
+            break;
+        case "search":
+            <circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path>
+            break;
+        case "doc":
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h4"></path>
+            break;
+        case "home":
+            <path d="M3.5 11L12 4l8.5 7"></path><path d="M6 9.5V20h12V9.5"></path>
+            break;
+        case "people":
+            <circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"></path><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M21.5 20c0-2.8-1.6-4.9-4-5.7"></path>
+            break;
+        case "menu":
+            <path d="M4 7h16M4 12h16M4 17h16"></path>
+            break;
+        case "backspace":
+            <path d="M9 6h11v12H9l-6-6z"></path><path d="M13 10l4 4M17 10l-4 4"></path>
+            break;
+        case "trash":
+            <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path>
+            break;
+        case "download":
+            <path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public int Size { get; set; } = 24;
+
+    [Parameter]
+    public double Stroke { get; set; } = 2;
+
+    [Parameter]
+    public string? Class { get; set; }
+}

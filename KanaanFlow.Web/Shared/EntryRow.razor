@@ -1,0 +1,72 @@
+@inherits KfComponent
+
+@* One entry in a list: arrow + word + signed amount, so color is never the only signal. *@
+<div class="row">
+    @if (Entry.Type == EntryType.Exchange)
+    {
+        <span class="row-ic fx"><Icon Name="fx" Size="22" Stroke="2.2" /></span>
+        <span class="row-main">
+            <span class="row-title">@T("exchanged")</span>
+            <span class="row-sub"><span class="ltr">@Fmt.Money(Entry.Amount) @Sym(Entry.Currency) → @Fmt.Money(Entry.ToAmount) @Sym(Entry.ToCurrency)</span> · @When</span>
+        </span>
+    }
+    else
+    {
+        bool isIn = Entry.Type == EntryType.In;
+        <span class="row-ic @(isIn ? "in" : "out")"><Icon Name="@(isIn ? "in" : "out")" Size="22" Stroke="2.4" /></span>
+        <span class="row-main">
+            <span class="row-title">@Title</span>
+            <span class="row-sub">@Sub</span>
+        </span>
+        <Money Class="@(isIn ? "c-in" : "c-out")" Text="@Fmt.Signed(Entry.Amount, isIn)" Symbol="@Sym(Entry.Currency)" />
+        <span class="sr-only">@(isIn ? T("received") : T("paid"))</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Entry Entry { get; set; } = default!;
+
+    /// <summary>Show the day instead of the time (for lists that span several days).</summary>
+    [Parameter]
+    public bool WithDate { get; set; }
+
+    /// <summary>In a contact's history the contact is known, so the title is the entry type.</summary>
+    [Parameter]
+    public bool ForContact { get; set; }
+
+    private string When => WithDate || Entry.Time.Length == 0 ? Books.DayLabel(Entry.Date) : Entry.Time;
+
+    private string Title
+    {
+        get
+        {
+            if (ForContact || Entry.ContactId == null)
+            {
+                return Books.EntryCategoryName(Entry.CategoryId);
+            }
+
+            return Books.ContactName(Entry.ContactId);
+        }
+    }
+
+    private string Sub
+    {
+        get
+        {
+            List<string> parts = new List<string>();
+            if (!ForContact && Entry.ContactId != null)
+            {
+                parts.Add(Books.EntryCategoryName(Entry.CategoryId));
+            }
+
+            parts.Add(When);
+            if (Entry.Note.Length > 0)
+            {
+                parts.Add(Entry.Note);
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+}

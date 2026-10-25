@@ -1,0 +1,170 @@
+@page "/loans/new"
+@layout FlowLayout
+@inherits KfComponent
+
+<PageTitle>@T("newLoan") · KanaanFlow</PageTitle>
+<div class="flow navy">
+    <div class="flow-head">
+        <button type="button" class="back" @onclick="Leave"><Icon Name="back" Class="flip" Stroke="2.2" />@T("cancel")</button>
+        <h1 class="title" style="margin:0">@T("newLoan")</h1>
+        <div class="step"></div>
+    </div>
+    <div class="flow-inner">
+        <div class="flow-body" style="gap:16px;padding-top:18px">
+            <h2 class="h2" style="font-size:22px">@T("loanDir")</h2>
+            <div class="grid-2">
+                <button type="button" class="sel dir-tab dir-tab-lg" aria-pressed="@(direction == LoanDirection.Lent ? "true" : "false")" @onclick="() => direction = LoanDirection.Lent"><b>@T("lentLong")</b><span>@T("lentHint")</span></button>
+                <button type="button" class="sel dir-tab dir-tab-lg" aria-pressed="@(direction == LoanDirection.Borrowed ? "true" : "false")" @onclick="() => direction = LoanDirection.Borrowed"><b>@T("borrowedLong")</b><span>@T("borrowedHint")</span></button>
+            </div>
+
+            <h2 class="h2" style="font-size:20px">@T("who")</h2>
+            @if (Book.Contacts.Count == 0)
+            {
+                <p class="notice">@T("needPeople") <a href="people?add=1">@T("tabPeople")</a></p>
+            }
+            else
+            {
+                @if (Book.Contacts.Count > 8)
+                {
+                    <label class="search">
+                        <Icon Name="search" Size="22" />
+                        <input type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPeople")" aria-label="@T("searchPeople")" />
+                    </label>
+                }
+                <div class="wrap">
+                    @foreach (Contact contact in Matches)
+                    {
+                        Contact c = contact;
+                        <button type="button" class="sel chip-lg" aria-pressed="@(contactId == c.Id ? "true" : "false")" @onclick="() => contactId = c.Id">@c.Name</button>
+                    }
+                </div>
+            }
+
+            <label for="nlAmt" style="font-size:20px;font-weight:700">@T("amount")</label>
+            <input id="nlAmt" class="input input-big ltr" style="margin-top:-8px" inputmode="decimal" @bind="amountText" @bind:event="oninput" placeholder="0" />
+            <div class="grid-4" style="gap:6px" role="group" aria-label="@T("currency")">
+                @foreach (Currency c in Book.Currencies)
+                {
+                    Currency pick = c;
+                    <button type="button" class="sel cur-chip-sm" style="height:52px" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick">@Sym(c)</button>
+                }
+            </div>
+            <label class="field" style="font-size:20px;font-weight:700">@T("due")
+                <input class="input" type="date" @bind="due" />
+            </label>
+            @if (error.Length > 0)
+            {
+                <p class="err-text" role="alert">@error</p>
+            }
+        </div>
+        <div class="flow-foot">
+            <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">@T("save")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoanDirection direction = LoanDirection.Lent;
+    private string? contactId;
+    private string amountText = string.Empty;
+    private Currency currency = Currency.USD;
+    private DateOnly? due;
+    private string query = string.Empty;
+    private string error = string.Empty;
+    private bool saving;
+
+    [SupplyParameterFromQuery(Name = "dir")]
+    public string? DirParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "contact")]
+    public string? ContactParam { get; set; }
+
+    private IEnumerable<Contact> Matches
+    {
+        get
+        {
+            string q = query.Trim();
+            IEnumerable<Contact> list = Book.Contacts.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase);
+            return q.Length == 0 ? list : list.Where(c => c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase) || c.Id == contactId);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (!Books.CanRecord)
+        {
+            Nav.NavigateTo("", replace: true);
+            return;
+        }
+
+        direction = DirParam == "borrowed" ? LoanDirection.Borrowed : LoanDirection.Lent;
+        contactId = Book.FindContact(ContactParam)?.Id;
+        if (Enum.TryParse(Books.Settings.LastCurrency, out Currency last))
+        {
+            currency = last;
+        }
+    }
+
+    private void Leave()
+    {
+        Nav.NavigateTo(Book.FindContact(ContactParam) != null ? "people/" + ContactParam : "loans");
+    }
+
+    private async Task SaveAsync()
+    {
+        decimal? amount = Fmt.ParseAmount(amountText);
+        if (contactId == null)
+        {
+            error = T("pickPerson");
+            return;
+        }
+
+        if (amount == null || amount <= 0m)
+        {
+            error = T("enterAmount");
+            return;
+        }
+
+        saving = true;
+        Loan loan = new Loan
+        {
+            Id = BookService.NewId(),
+            Direction = direction,
+            ContactId = contactId,
+            Amount = amount.Value,
+            Currency = currency,
+            StartDate = Today,
+            DueDate = due,
+            CreatedBy = Books.Settings.MemberId
+        };
+
+        // Handing out a loan is cash out; receiving one is cash in.
+        Entry cash = new Entry
+        {
+            Id = BookService.NewId(),
+            Type = direction == LoanDirection.Lent ? EntryType.Out : EntryType.In,
+            Amount = amount.Value,
+            Currency = currency,
+            ContactId = contactId,
+            CategoryId = EntryCategory.LoanId,
+            Date = Today,
+            Time = DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            LoanId = loan.Id,
+            IsLoanPrincipal = true,
+            CreatedBy = Books.Settings.MemberId,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        await Books.RecordAsync(new LoanOpened { Loan = loan }, new EntryRecorded { Entry = cash });
+        string loanId = loan.Id;
+        Toasts.Show(
+            T("saved") + " · " + (direction == LoanDirection.Lent ? T("lent") : T("borrowed")) + " " + Fmt.Money(amount.Value) + " " + Sym(currency),
+            undo: async () =>
+            {
+                await Books.RecordAsync(new LoanVoided { LoanId = loanId });
+                Toasts.Show(T("undone"));
+            });
+        Nav.NavigateTo("loans?tab=" + (direction == LoanDirection.Lent ? "lent" : "borrowed") + "&open=" + loan.Id);
+    }
+}

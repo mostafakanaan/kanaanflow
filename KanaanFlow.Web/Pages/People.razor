@@ -1,0 +1,145 @@
+@page "/people"
+@inherits KfComponent
+
+<PageTitle>@T("peopleTitle") · KanaanFlow</PageTitle>
+<div class="title-row">
+    <h1 class="h1">@T("peopleTitle")</h1>
+    @if (Books.CanRecord)
+    {
+        <button type="button" class="btn btn-primary btn-sm" aria-expanded="@(adding ? "true" : "false")" @onclick="ToggleAdd"><Icon Name="plus" Size="20" Stroke="2.6" />@T("addPerson")</button>
+    }
+</div>
+
+@if (adding)
+{
+    <section class="add-panel">
+        <label class="field">@T("personName")
+            <input class="input" type="text" @bind="newName" @bind:event="oninput" placeholder="@T("personNamePh")" />
+        </label>
+        <label class="field">@T("phone")
+            <input class="input ltr" type="tel" @bind="newPhone" autocomplete="tel" />
+        </label>
+        <span style="font-size:17px;font-weight:600">@T("category")</span>
+        <div class="wrap">
+            @foreach (PeopleCategory category in Book.PeopleCategories)
+            {
+                PeopleCategory c = category;
+                <button type="button" class="sel chip" aria-pressed="@(newCategory == c.Id ? "true" : "false")" @onclick="() => newCategory = c.Id">@c.Name(Lang)</button>
+            }
+        </div>
+        <div class="grid-2">
+            <button type="button" class="btn btn-ghost" @onclick="ToggleAdd">@T("cancel")</button>
+            <button type="button" class="btn btn-primary" @onclick="SaveAsync">@T("save")</button>
+        </div>
+    </section>
+}
+
+<label class="search">
+    <Icon Name="search" Size="22" />
+    <input type="search" @bind="query" @bind:event="oninput" placeholder="@T("searchPeople")" aria-label="@T("searchPeople")" />
+</label>
+<div class="scroll-x no-scrollbar" role="group" aria-label="@T("category")">
+    <button type="button" class="sel chip" aria-pressed="@(filter == null ? "true" : "false")" @onclick="() => filter = null">@T("all")</button>
+    @foreach (PeopleCategory category in Book.PeopleCategories)
+    {
+        PeopleCategory c = category;
+        <button type="button" class="sel chip" aria-pressed="@(filter == c.Id ? "true" : "false")" @onclick="() => filter = c.Id">@c.Name(Lang)</button>
+    }
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+    @foreach (Contact contact in Visible)
+    {
+        LoanStatus? open = OpenLoanOf(contact.Id);
+        Entry? last = Book.Entries.FirstOrDefault(e => e.ContactId == contact.Id);
+        <a class="person" href="people/@contact.Id">
+            <span class="avatar avatar-48" aria-hidden="true">@Fmt.Initial(contact.Name)</span>
+            <span class="person-main">
+                <span class="person-name">@contact.Name</span>
+                <span class="person-sub">@Books.PeopleCategoryName(contact.CategoryId) · @(last != null ? T("lastActivity") + ": " + Books.DayLabel(last.Date) : T("noActivity"))</span>
+            </span>
+            @if (open != null)
+            {
+                bool lent = open.Loan.Direction == LoanDirection.Lent;
+                <span class="owe-chip @(lent ? "lent" : "borrowed")">
+                    <span class="t">@(lent ? T("owesYou") : T("youOwe"))</span>
+                    <Money Text="@Fmt.Money(open.Remaining)" Symbol="@Sym(open.Loan.Currency)" />
+                </span>
+            }
+        </a>
+    }
+    @if (Book.Contacts.Count == 0)
+    {
+        <p class="empty">@T("noPeople")</p>
+    }
+    else if (!Visible.Any())
+    {
+        <p class="empty">@T("noMatch")</p>
+    }
+</div>
+
+@code {
+    private bool adding;
+    private string newName = string.Empty;
+    private string newPhone = string.Empty;
+    private string newCategory = "customer";
+    private string query = string.Empty;
+    private string? filter;
+
+    [SupplyParameterFromQuery(Name = "add")]
+    public string? AddParam { get; set; }
+
+    private IEnumerable<Contact> Visible
+    {
+        get
+        {
+            string q = query.Trim();
+            return Book.Contacts
+                .Where(c => filter == null || c.CategoryId == filter)
+                .Where(c => q.Length == 0 || c.Name.Contains(q, StringComparison.CurrentCultureIgnoreCase))
+                .OrderByDescending(c => Book.Entries.FirstOrDefault(e => e.ContactId == c.Id)?.Date ?? DateOnly.MinValue)
+                .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        adding = AddParam == "1" && Books.CanRecord;
+        if (Book.FindPeopleCategory(newCategory) == null)
+        {
+            newCategory = PeopleCategory.OtherId;
+        }
+    }
+
+    private LoanStatus? OpenLoanOf(string contactId)
+    {
+        return Book.Loans
+            .Where(l => l.ContactId == contactId)
+            .Select(l => BookCalculator.LoanStatusOf(Book, l, Today))
+            .FirstOrDefault(s => s.IsOpen);
+    }
+
+    private void ToggleAdd()
+    {
+        adding = !adding;
+        newName = string.Empty;
+        newPhone = string.Empty;
+    }
+
+    private async Task SaveAsync()
+    {
+        string name = newName.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        Contact contact = new Contact { Id = BookService.NewId(), Name = name, Phone = newPhone.Trim(), CategoryId = newCategory };
+        await Books.RecordAsync(new ContactSaved { Contact = contact });
+        adding = false;
+        newName = string.Empty;
+        newPhone = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+}

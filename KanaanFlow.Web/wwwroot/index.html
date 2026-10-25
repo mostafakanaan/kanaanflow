@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>KanaanFlow</title>
+    <meta name="description" content="KanaanFlow — حساباتك ببساطة. A simple money book for small teams that works offline." />
+    <meta name="theme-color" content="#1C2A6E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="KanaanFlow" />
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="boot" role="status">
+            <img class="logo" src="icon-192.png" alt="" />
+            <span>KanaanFlow</span>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" role="alert">
+        حدث خطأ غير متوقع. An unexpected error occurred.
+        <a href="." class="reload">تحديث · Reload</a>
+        <span class="dismiss" aria-label="Close">✕</span>
+    </div>
+    <script src="js/kf.js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>navigator.serviceWorker && navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+</body>
+
+</html>

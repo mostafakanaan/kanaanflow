@@ -1,0 +1,36 @@
+@implements IDisposable
+@inject ToastService Toasts
+@inject BookService Books
+
+@if (Toasts.Current is ToastMessage toast)
+{
+    <div class="toast @(InFlow ? "in-flow" : string.Empty)" role="status">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7FD8B3" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto"><path d="M5 12l5 5 9-10"></path></svg>
+        <span class="txt">@toast.Text</span>
+        @if (toast.Undo != null)
+        {
+            <button type="button" @onclick="() => Run(toast.Undo)">@Books.T("undo")</button>
+        }
+        @if (toast.Share != null)
+        {
+            <button type="button" @onclick="() => Run(toast.Share)">@Books.T("share")</button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool InFlow { get; set; }
+
+    public void Dispose() => Toasts.Changed -= OnChanged;
+
+    protected override void OnInitialized() => Toasts.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task Run(Func<Task> action)
+    {
+        Toasts.Clear();
+        await action();
+    }
+}

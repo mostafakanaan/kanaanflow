@@ -1,0 +1,13 @@
+@* An amount with its currency symbol. Numbers always read left to right, even in Arabic. *@
+<span class="money @Class"><span class="n">@Text</span><span class="s">@Symbol</span></span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string Symbol { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Class { get; set; }
+}

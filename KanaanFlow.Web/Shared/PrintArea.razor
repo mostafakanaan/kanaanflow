@@ -1,0 +1,60 @@
+@implements IDisposable
+@inject ExportService Export
+@inject BookService Books
+
+@* Only visible when printing; holds the report or statement being printed. *@
+<div class="print-area" dir="@(Books.IsRtl ? "rtl" : "ltr")">
+    @if (Export.Current is PrintDocument doc)
+    {
+        <div class="brandline"><strong>KanaanFlow</strong><span>@Books.T("tagline")</span></div>
+        <h1>@doc.Title</h1>
+        <div class="meta">
+            @foreach (string line in doc.MetaLines)
+            {
+                <div>@line</div>
+            }
+        </div>
+        @if (doc.TotalsRows.Count > 0)
+        {
+            <table>
+                <thead><tr>@foreach (string h in doc.TotalsHeader) { <th>@h</th> }</tr></thead>
+                <tbody>
+                    @foreach (List<string> row in doc.TotalsRows)
+                    {
+                        <tr>
+                            @for (int i = 0; i < row.Count; i++)
+                            {
+                                <td class="@(i > 0 ? "num" : null)">@row[i]</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        @if (doc.EntriesRows.Count > 0)
+        {
+            <table>
+                <thead><tr>@foreach (string h in doc.EntriesHeader) { <th>@h</th> }</tr></thead>
+                <tbody>
+                    @foreach (List<string> row in doc.EntriesRows)
+                    {
+                        <tr>
+                            @for (int i = 0; i < row.Count; i++)
+                            {
+                                <td class="@(i == row.Count - 1 ? "num" : null)">@row[i]</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</div>
+
+@code {
+    public void Dispose() => Export.PrintChanged -= OnChanged;
+
+    protected override void OnInitialized() => Export.PrintChanged += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}

@@ -1,0 +1,405 @@
+@page "/more"
+@inherits KfComponent
+@inject SyncService Sync
+@inject IJSRuntime JS
+
+<PageTitle>@T("moreTitle") · KanaanFlow</PageTitle>
+<h1 class="h1">@T("moreTitle")</h1>
+
+<section class="card card-pad">
+    <h2 class="h3">@T("language")</h2>
+    <div class="grid-2" style="gap:8px">
+        <button type="button" class="sel tile" style="font-size:18px;font-weight:700" aria-pressed="@(Lang == "ar" ? "true" : "false")" @onclick='() => SetLanguageAsync("ar")'>العربية</button>
+        <button type="button" class="sel tile" style="font-size:18px;font-weight:700" aria-pressed="@(Lang == "en" ? "true" : "false")" @onclick='() => SetLanguageAsync("en")'>English</button>
+    </div>
+    <h2 class="h3" style="margin-top:6px">@T("textSize")</h2>
+    <div class="grid-3">
+        @foreach ((double Zoom, string Label, string Size) z in Sizes)
+        {
+            double zoom = z.Zoom;
+            <button type="button" class="sel tile" style="height:56px;font-weight:700;font-size:@z.Size" aria-pressed="@(Math.Abs(Books.Settings.Zoom - zoom) < 0.01 ? "true" : "false")" @onclick="() => SetZoomAsync(zoom)">@T(z.Label)</button>
+        }
+    </div>
+</section>
+
+@if (showInstall)
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("install")</h2>
+        <p class="muted" style="font-size:16px">@T("installSub")</p>
+        @if (canInstall)
+        {
+            <button type="button" class="btn btn-primary" @onclick="InstallAsync"><Icon Name="download" Size="22" />@T("install")</button>
+        }
+        else
+        {
+            <p class="notice">@T("installIos")</p>
+        }
+    </section>
+}
+
+<section class="card card-pad" id="sync">
+    <div style="display:flex;align-items:center;gap:10px">
+        <span class="dot @DotClass" style="width:14px;height:14px;border-radius:7px" aria-hidden="true"></span>
+        <h2 class="h3">@T("sync")</h2>
+    </div>
+    <p style="font-size:16px;line-height:1.55">@SyncText</p>
+    @if (Books.Settings.LastSyncUtc is DateTime last && Books.Settings.SyncConfigured)
+    {
+        <p class="muted small">@T("lastSync"): @Books.DayLabel(DateOnly.FromDateTime(last.ToLocalTime())) <span class="ltr">@last.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)</span></p>
+    }
+    @if (Books.Settings.SyncConfigured)
+    {
+        <div class="grid-2">
+            <button type="button" class="btn btn-primary" disabled="@(Sync.State == SyncState.Syncing)" @onclick="Sync.SyncNowAsync">@T("syncNow")</button>
+            @if (Books.CanManage)
+            {
+                <button type="button" class="btn btn-ghost" @onclick="DisconnectAsync">@T("disconnect")</button>
+            }
+        </div>
+        <p class="muted small">@T("bookCode"): <span class="ltr">@Books.Settings.BookCode</span></p>
+    }
+    else
+    {
+        <button type="button" class="sel tile" aria-expanded="@(syncFormOpen ? "true" : "false")" aria-pressed="@(syncFormOpen ? "true" : "false")" @onclick="() => syncFormOpen = !syncFormOpen">@T("syncSetup")</button>
+        @if (syncFormOpen)
+        {
+            <label class="field">@T("syncUrl")
+                <input class="input ltr" type="url" @bind="syncUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+            </label>
+            <label class="field">@T("syncKey")
+                <input class="input ltr" type="text" @bind="syncKey" autocomplete="off" />
+            </label>
+            <label class="field">@T("bookCode")
+                <input class="input ltr" type="text" @bind="bookCode" autocomplete="off" />
+                <span class="muted small" style="font-weight:400">@T("bookCodeHint")</span>
+            </label>
+            <button type="button" class="btn btn-primary" @onclick="ConnectAsync">@T("connect")</button>
+        }
+    }
+</section>
+
+@if (Books.CanManage)
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("openingTitle")</h2>
+        <p class="muted" style="font-size:15px">@T("openingHint")</p>
+        @foreach (Currency currency in Book.Currencies)
+        {
+            Currency c = currency;
+            <div class="opening">
+                <label for="open-@c">@Fmt.LongName(c, Lang)</label>
+                <input id="open-@c" class="input" inputmode="decimal" value="@Fmt.Money(Book.OpeningBalances[c])" @onchange="e => SetOpeningAsync(c, e.Value?.ToString())" />
+            </div>
+        }
+    </section>
+
+    <section class="card card-pad">
+        <h2 class="h3">@T("manageCats")</h2>
+        <p class="muted" style="font-size:15px">@T("catsIntro")</p>
+        @foreach (EntryCategory category in Book.EntryCategories)
+        {
+            EntryCategory c = category;
+            <div class="cat-edit">
+                <input class="input" value="@c.Name(Lang)" aria-label="@c.Name(Lang)" @onchange="e => RenameEntryCategoryAsync(c, e.Value?.ToString())" />
+                @if (!c.IsLocked)
+                {
+                    <select class="kind" aria-label="@T("typeCol")" value="@c.Kind" @onchange="e => SetKindAsync(c, e.Value?.ToString())">
+                        <option value="@CategoryKind.In">@T("kIn")</option>
+                        <option value="@CategoryKind.Out">@T("kOut")</option>
+                        <option value="@CategoryKind.Both">@T("kBoth")</option>
+                    </select>
+                    <button type="button" class="icon-btn" aria-label="@T("delete") @c.Name(Lang)" @onclick="() => RemoveEntryCategoryAsync(c)"><Icon Name="trash" Size="22" /></button>
+                }
+            </div>
+        }
+        <div style="display:flex;gap:8px">
+            <input class="input" style="height:52px;font-size:17px" type="text" @bind="newEntryCat" placeholder="@T("addCatPh")" aria-label="@T("addCatPh")" />
+            <button type="button" class="btn btn-primary" @onclick="AddEntryCategoryAsync">@T("add")</button>
+        </div>
+    </section>
+
+    <section class="card card-pad">
+        <h2 class="h3">@T("peopleCats")</h2>
+        @foreach (PeopleCategory category in Book.PeopleCategories)
+        {
+            PeopleCategory c = category;
+            <div class="cat-edit">
+                <input class="input" value="@c.Name(Lang)" aria-label="@c.Name(Lang)" @onchange="e => RenamePeopleCategoryAsync(c, e.Value?.ToString())" />
+                @if (!c.IsLocked)
+                {
+                    <button type="button" class="icon-btn" aria-label="@T("delete") @c.Name(Lang)" @onclick="() => RemovePeopleCategoryAsync(c)"><Icon Name="trash" Size="22" /></button>
+                }
+            </div>
+        }
+        <div style="display:flex;gap:8px">
+            <input class="input" style="height:52px;font-size:17px" type="text" @bind="newPeopleCat" placeholder="@T("addCatPh")" aria-label="@T("addCatPh")" />
+            <button type="button" class="btn btn-primary" @onclick="AddPeopleCategoryAsync">@T("add")</button>
+        </div>
+    </section>
+}
+else
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("manageCats")</h2>
+        <div class="wrap">
+            @foreach (EntryCategory category in Book.EntryCategories)
+            {
+                <span class="tag" style="padding:8px 14px;border-radius:20px;font-size:16px">@category.Name(Lang)</span>
+            }
+        </div>
+    </section>
+}
+
+<section class="card card-pad" style="gap:6px">
+    <h2 class="h3" style="margin-bottom:4px">@T("team")</h2>
+    @foreach (TeamMember member in Book.Members)
+    {
+        TeamMember m = member;
+        bool isMe = m.Id == Books.Settings.MemberId;
+        <div class="member">
+            <span class="avatar avatar-40" aria-hidden="true">@Fmt.Initial(m.Name)</span>
+            <span class="nm">@(m.Name.Length > 0 ? m.Name : "—")@(isMe ? " (" + T("you") + ")" : string.Empty)</span>
+            @if (Books.CanManage && !isMe)
+            {
+                <select class="kind" style="height:44px;border-radius:10px;border:2px solid var(--field);background:#fff;font-size:15px" aria-label="@m.Name" value="@m.Role" @onchange="e => SetRoleAsync(m, e.Value?.ToString())">
+                    <option value="@TeamRole.Owner">@T("roleOwner")</option>
+                    <option value="@TeamRole.Staff">@T("roleStaff")</option>
+                    <option value="@TeamRole.Viewer">@T("roleViewer")</option>
+                </select>
+            }
+            else
+            {
+                <span class="role @RoleClass(m.Role)">@RoleName(m.Role)</span>
+            }
+            @if (!isMe && Books.CanManage)
+            {
+                <button type="button" class="link-btn" style="font-size:15px" @onclick="() => UseMemberAsync(m)">@T("useThisDevice")</button>
+            }
+        </div>
+    }
+    @if (Books.CanManage)
+    {
+        <div style="display:flex;gap:8px;margin-top:8px">
+            <input class="input" style="height:52px;font-size:17px" type="text" @bind="newMember" placeholder="@T("memberName")" aria-label="@T("memberName")" />
+            <button type="button" class="btn btn-primary" @onclick="AddMemberAsync">@T("invite")</button>
+        </div>
+    }
+</section>
+
+@code {
+    private static readonly (double Zoom, string Label, string Size)[] Sizes =
+    {
+        (1.0, "sNormal", "16px"), (1.12, "sLarge", "19px"), (1.25, "sXL", "22px")
+    };
+
+    private bool syncFormOpen;
+    private string syncUrl = string.Empty;
+    private string syncKey = string.Empty;
+    private string bookCode = string.Empty;
+    private string newEntryCat = string.Empty;
+    private string newPeopleCat = string.Empty;
+    private string newMember = string.Empty;
+    private bool showInstall;
+    private bool canInstall;
+
+    private string DotClass => Sync.State switch
+    {
+        SyncState.Offline => "warn",
+        SyncState.Error => "warn",
+        SyncState.LocalOnly => "local",
+        _ => string.Empty
+    };
+
+    private string SyncText => Sync.State switch
+    {
+        SyncState.Offline => T("syncOff") + (Books.PendingCount > 0 ? " (" + Books.PendingCount + " " + T("waiting") + ")" : string.Empty),
+        SyncState.Error => T("syncErr"),
+        SyncState.LocalOnly => T("syncLocal"),
+        _ => T("syncOk")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        bool standalone = await JS.InvokeAsync<bool>("kf.isStandalone");
+        canInstall = await JS.InvokeAsync<bool>("kf.canInstall");
+        bool ios = await JS.InvokeAsync<bool>("kf.isIos");
+        showInstall = !standalone && (canInstall || ios);
+    }
+
+    private async Task SetLanguageAsync(string language)
+    {
+        Books.Settings.Language = language;
+        await Books.SaveSettingsAsync();
+    }
+
+    private async Task SetZoomAsync(double zoom)
+    {
+        Books.Settings.Zoom = zoom;
+        await Books.SaveSettingsAsync();
+    }
+
+    private async Task InstallAsync()
+    {
+        await JS.InvokeAsync<bool>("kf.install");
+        canInstall = await JS.InvokeAsync<bool>("kf.canInstall");
+        showInstall = canInstall;
+    }
+
+    private async Task ConnectAsync()
+    {
+        if (syncUrl.Trim().Length == 0 || syncKey.Trim().Length == 0 || bookCode.Trim().Length == 0)
+        {
+            return;
+        }
+
+        await Sync.ConfigureAsync(syncUrl, syncKey, bookCode);
+        syncFormOpen = false;
+    }
+
+    private Task DisconnectAsync() => Sync.DisconnectAsync();
+
+    private async Task SetOpeningAsync(Currency currency, string? text)
+    {
+        decimal amount = Fmt.ParseAmount(text) ?? 0m;
+        if (amount != Book.OpeningBalances[currency])
+        {
+            await Books.RecordAsync(new OpeningBalanceSet { Currency = currency, Amount = amount });
+            Toasts.Show(T("saved"));
+        }
+    }
+
+    private Task RenameEntryCategoryAsync(EntryCategory category, string? text)
+    {
+        string name = (text ?? string.Empty).Trim();
+        if (name.Length == 0 || name == category.Name(Lang))
+        {
+            return Task.CompletedTask;
+        }
+
+        EntryCategory updated = new EntryCategory
+        {
+            Id = category.Id,
+            Kind = category.Kind,
+            NameAr = Lang == "ar" ? name : category.NameAr,
+            NameEn = Lang == "en" ? name : category.NameEn
+        };
+        return Books.RecordAsync(new EntryCategorySaved { Category = updated });
+    }
+
+    private Task SetKindAsync(EntryCategory category, string? value)
+    {
+        if (!Enum.TryParse(value, out CategoryKind kind) || kind == category.Kind)
+        {
+            return Task.CompletedTask;
+        }
+
+        EntryCategory updated = new EntryCategory { Id = category.Id, Kind = kind, NameAr = category.NameAr, NameEn = category.NameEn };
+        return Books.RecordAsync(new EntryCategorySaved { Category = updated });
+    }
+
+    private async Task RemoveEntryCategoryAsync(EntryCategory category)
+    {
+        await Books.RecordAsync(new EntryCategoryRemoved { CategoryId = category.Id });
+        Toasts.Show(T("deleteDone") + " · " + category.Name(Lang), undo: () => Books.RecordAsync(new EntryCategorySaved { Category = category }));
+    }
+
+    private async Task AddEntryCategoryAsync()
+    {
+        string name = newEntryCat.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Books.RecordAsync(new EntryCategorySaved
+        {
+            Category = new EntryCategory { Id = BookService.NewId(), NameAr = name, NameEn = name, Kind = CategoryKind.Both }
+        });
+        newEntryCat = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+
+    private Task RenamePeopleCategoryAsync(PeopleCategory category, string? text)
+    {
+        string name = (text ?? string.Empty).Trim();
+        if (name.Length == 0 || name == category.Name(Lang))
+        {
+            return Task.CompletedTask;
+        }
+
+        PeopleCategory updated = new PeopleCategory
+        {
+            Id = category.Id,
+            NameAr = Lang == "ar" ? name : category.NameAr,
+            NameEn = Lang == "en" ? name : category.NameEn
+        };
+        return Books.RecordAsync(new PeopleCategorySaved { Category = updated });
+    }
+
+    private async Task RemovePeopleCategoryAsync(PeopleCategory category)
+    {
+        await Books.RecordAsync(new PeopleCategoryRemoved { CategoryId = category.Id });
+        Toasts.Show(T("deleteDone") + " · " + category.Name(Lang));
+    }
+
+    private async Task AddPeopleCategoryAsync()
+    {
+        string name = newPeopleCat.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Books.RecordAsync(new PeopleCategorySaved
+        {
+            Category = new PeopleCategory { Id = BookService.NewId(), NameAr = name, NameEn = name }
+        });
+        newPeopleCat = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+
+    private async Task AddMemberAsync()
+    {
+        string name = newMember.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Books.RecordAsync(new MemberSaved { Member = new TeamMember { Id = BookService.NewId(), Name = name, Role = TeamRole.Staff } });
+        newMember = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+
+    private Task SetRoleAsync(TeamMember member, string? value)
+    {
+        if (!Enum.TryParse(value, out TeamRole role) || role == member.Role)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Books.RecordAsync(new MemberSaved { Member = new TeamMember { Id = member.Id, Name = member.Name, Role = role } });
+    }
+
+    private async Task UseMemberAsync(TeamMember member)
+    {
+        Books.Settings.MemberId = member.Id;
+        await Books.SaveSettingsAsync();
+    }
+
+    private string RoleName(TeamRole role) => role switch
+    {
+        TeamRole.Owner => T("roleOwner"),
+        TeamRole.Staff => T("roleStaff"),
+        _ => T("roleViewer")
+    };
+
+    private static string RoleClass(TeamRole role) => role switch
+    {
+        TeamRole.Owner => "owner",
+        TeamRole.Viewer => "viewer",
+        _ => string.Empty
+    };
+}
