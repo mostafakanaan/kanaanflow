@@ -9,6 +9,9 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(EntryRecorded), "entry.recorded")]
 [JsonDerivedType(typeof(EntryVoided), "entry.voided")]
 [JsonDerivedType(typeof(EntryApproved), "entry.approved")]
+[JsonDerivedType(typeof(EntryDeleted), "entry.deleted")]
+[JsonDerivedType(typeof(EntryRestored), "entry.restored")]
+[JsonDerivedType(typeof(EntryPurged), "entry.purged")]
 [JsonDerivedType(typeof(ContactSaved), "contact.saved")]
 [JsonDerivedType(typeof(LoanOpened), "loan.opened")]
 [JsonDerivedType(typeof(LoanVoided), "loan.voided")]
@@ -35,6 +38,29 @@ public sealed class EntryVoided : BookChange
 
 /// <summary>An Accountant approves an Owner's entry. Informative only: balances count the entry either way.</summary>
 public sealed class EntryApproved : BookChange
+{
+    public string EntryId { get; set; } = string.Empty;
+}
+
+/// <summary>An Accountant marks an entry as deleted: it leaves balances and reports but can be restored.</summary>
+public sealed class EntryDeleted : BookChange
+{
+    public string EntryId { get; set; } = string.Empty;
+
+    public string Reason { get; set; } = string.Empty;
+}
+
+/// <summary>Brings a deleted entry back.</summary>
+public sealed class EntryRestored : BookChange
+{
+    public string EntryId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// An Admin deletes an entry for good. The server removes the entry's other events, and every device removes its copy;
+/// only this tombstone (the id alone) stays, so devices that sync later learn to remove theirs.
+/// </summary>
+public sealed class EntryPurged : BookChange
 {
     public string EntryId { get; set; } = string.Empty;
 }

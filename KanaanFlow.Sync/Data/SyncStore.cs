@@ -416,10 +416,15 @@ public sealed class SyncStore
             }
 
             // Every change is tied to the person who made it, so nobody can record in someone else's name.
+            string? entryId = EntryIdOf(bookEvent.Change);
             string? reason = bookEvent.AtUtc > DateTime.UtcNow.AddDays(1)
                 ? "time-in-future"
                 : bookEvent.Actor != member.Id
                 ? "wrong-actor"
+                : entryId != null && await IsPurgedAsync(connection, tx, entryId)
+                ? "entry-purged"
+                : bookEvent.Change is EntryDeleted && await IsLoanPrincipalAsync(connection, tx, ((EntryDeleted)bookEvent.Change).EntryId)
+                ? "cannot-delete-loan-entry"
                 : ChangePolicy.Check(
                     role,
                     member.Id,
@@ -436,6 +441,11 @@ public sealed class SyncStore
             await InsertEventAsync(connection, tx, bookEvent, member.Id);
             known.Add(bookEvent.Id);
             accepted.Add(bookEvent.Id);
+            if (bookEvent.Change is EntryPurged purge)
+            {
+                int removed = await PurgeEntryAsync(connection, tx, purge.EntryId);
+                logger.LogWarning("{Name} permanently deleted entry {EntryId} ({Removed} events removed).", member.Name, purge.EntryId, removed);
+            }
         }
 
         await tx.CommitAsync();
@@ -611,6 +621,44 @@ public sealed class SyncStore
         }
 
         return found;
+    }
+
+    /// <summary>The entry a change is about, when it is about one.</summary>
+    private static string? EntryIdOf(BookChange change) => change switch
+    {
+        EntryRecorded recorded => recorded.Entry.Id,
+        EntryVoided voided => voided.EntryId,
+        EntryApproved approved => approved.EntryId,
+        EntryDeleted deleted => deleted.EntryId,
+        EntryRestored restored => restored.EntryId,
+        _ => null
+    };
+
+    private static async Task<bool> IsPurgedAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "select exists (select 1 from events where kind = 'entry.purged' and payload -> 'change' ->> 'entryId' = @id)", connection, tx);
+        command.Parameters.AddWithValue("id", entryId);
+        return (bool)(await command.ExecuteScalarAsync())!;
+    }
+
+    private static async Task<bool> IsLoanPrincipalAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "select exists (select 1 from events where kind = 'entry.recorded' and payload -> 'change' -> 'entry' ->> 'id' = @id "
+            + "and (payload -> 'change' -> 'entry' ->> 'isLoanPrincipal')::boolean)", connection, tx);
+        command.Parameters.AddWithValue("id", entryId);
+        return (bool)(await command.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>Removes an entry and every change about it from the log, keeping only the purge tombstone.</summary>
+    private static async Task<int> PurgeEntryAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "delete from events where (kind = 'entry.recorded' and payload -> 'change' -> 'entry' ->> 'id' = @id) "
+            + "or (kind <> 'entry.purged' and payload -> 'change' ->> 'entryId' = @id)", connection, tx);
+        command.Parameters.AddWithValue("id", entryId);
+        return await command.ExecuteNonQueryAsync();
     }
 
     private static string? OwnerOf(NpgsqlConnection connection, NpgsqlTransaction tx, string kind, string property, string id)

@@ -1,7 +1,7 @@
 @inherits KfComponent
 
 @* Owners' entries: whether an Accountant approved them (informative only), with the approve button for Accountants. *@
-@if (Entry.NeedsApproval)
+@if (Entry.NeedsApproval && (Entry.ApprovedBy != null || !Entry.IsDeleted))
 {
     <span class="approval @(Entry.ApprovedBy != null ? "done" : "pending")">
         @if (Entry.ApprovedBy != null)
@@ -13,9 +13,9 @@
         {
             <Icon Name="clock" Size="16" Stroke="2.4" />
             <span>@T("awaitingApproval")</span>
-            @if (Books.CanApprove && Entry.CreatedBy != Books.Settings.MemberId)
+            @if (Books.CanApprove && Entry.CreatedBy != Books.Settings.MemberId && !Entry.IsDeleted)
             {
-                <button type="button" class="approve-btn" @onclick="ApproveAsync">@T("approve")</button>
+                <button type="button" class="approve-btn" @onclick="ApproveAsync" @onclick:stopPropagation="true">@T("approve")</button>
             }
         }
     </span>

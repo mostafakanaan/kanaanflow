@@ -10,6 +10,10 @@
         <a class="hub-tile" href="@tile.Href">
             <span class="hub-ic"><Icon Name="@tile.Icon" Size="28" /></span>
             <span class="hub-text"><b>@T(tile.Title)</b><span>@T(tile.Sub)</span></span>
+            @if (tile.Href == "more/deleted" && Book.DeletedEntries.Count > 0)
+            {
+                <span class="count-pill">@Book.DeletedEntries.Count</span>
+            }
             <Icon Name="chevron" Size="20" Class="flip hub-go" />
         </a>
     }
@@ -26,6 +30,11 @@
             yield return ("more/entities", "folder", "tileEntities", "tileEntitiesSub");
             yield return ("more/balances", "wallet", "tileBalances", "tileBalancesSub");
             yield return ("more/app", "settings", "tileApp", "tileAppSub");
+            if (Books.CanDelete)
+            {
+                yield return ("more/deleted", "trash", "deletedEntries", "deletedEntriesSub");
+            }
+
             if (Books.IsAdmin)
             {
                 yield return ("more/admin", "shield", "adminPanel", "adminPanelSub");

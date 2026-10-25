@@ -111,6 +111,9 @@ under **More › Users**.
 Run one now with `sudo kanaanflow-backup`. Copying that folder somewhere else (another disk, cloud storage)
 protects against losing the Pi itself. Every signed-in phone also keeps a full copy of the book.
 
+Entries an Admin deletes permanently are removed from the database and every phone, but nightly backups made
+before that still contain them until they rotate out (14 days).
+
 Restore a backup:
 
 ```bash

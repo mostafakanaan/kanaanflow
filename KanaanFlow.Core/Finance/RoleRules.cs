@@ -17,6 +17,12 @@ public static class RoleRules
 
     public static bool CanApprove(TeamRole role) => role is TeamRole.Admin or TeamRole.Accountant;
 
+    /// <summary>Marking entries as deleted, and restoring them.</summary>
+    public static bool CanDelete(TeamRole role) => role is TeamRole.Admin or TeamRole.Accountant;
+
+    /// <summary>Deleting entries for good.</summary>
+    public static bool CanPurge(TeamRole role) => role == TeamRole.Admin;
+
     /// <summary>Entries recorded by Owners show whether an Accountant has approved them.</summary>
     public static bool NeedsApproval(TeamRole role) => role == TeamRole.Owner;
 

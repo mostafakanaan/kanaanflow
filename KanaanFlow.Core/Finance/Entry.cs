@@ -62,6 +62,23 @@ public sealed class Entry
     [JsonIgnore]
     public DateTime? ApprovedUtc { get; set; }
 
+    /// <summary>Set by the book: who marked the entry as deleted, null while it counts.</summary>
+    [JsonIgnore]
+    public string? DeletedBy { get; set; }
+
+    [JsonIgnore]
+    public DateTime? DeletedUtc { get; set; }
+
+    [JsonIgnore]
+    public string DeleteReason { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public bool IsDeleted => DeletedBy != null;
+
+    /// <summary>A loan's own principal can't be deleted on its own: the loan is removed instead.</summary>
+    [JsonIgnore]
+    public bool CanBeDeleted => !IsLoanPrincipal;
+
     /// <summary>Set by the book: the author was on the team when the entry was recorded.</summary>
     [JsonIgnore]
     public bool AuthorKnown { get; set; }
