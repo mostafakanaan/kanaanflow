@@ -275,6 +275,15 @@ public sealed class SyncService : IDisposable
 
     private async Task PullAsync()
     {
+        // An older build skips kinds of changes it doesn't know yet. After an update, read everything again once;
+        // events already here are ignored, so this only adds what was skipped.
+        string build = typeof(SyncService).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        if (book.Settings.PulledWithBuild != build)
+        {
+            book.Settings.PulledSeq = 0;
+            book.Settings.PulledWithBuild = build;
+        }
+
         while (true)
         {
             List<(long Seq, BookEvent? Event)> rows = await api.PullAsync(book.Settings.PulledSeq, PageSize);

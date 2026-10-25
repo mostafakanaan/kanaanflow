@@ -267,7 +267,12 @@ public sealed class BookService
         }
 
         await store.PutEventsAsync(rows);
-        await RemovePurgedAsync(changes);
+        if (Settings.LocalOnly)
+        {
+            // No server to refuse it: remove the entry's events now. Signed in, that waits until the server accepts.
+            await RemovePurgedAsync(changes);
+        }
+
         Rebuild();
         Changed?.Invoke();
         LocalChange?.Invoke();
@@ -319,6 +324,9 @@ public sealed class BookService
             unsynced.Remove(id);
         }
 
+        // Purges the server accepted: the server has removed the entry, so this device does too.
+        await RemovePurgedAsync(ids.Where(events.ContainsKey).Select(id => events[id].Change).ToList());
+        Rebuild();
         Changed?.Invoke();
     }
 
@@ -393,15 +401,10 @@ public sealed class BookService
             return;
         }
 
-        List<string> drop = events.Values.Where(e => e.Change switch
-        {
-            EntryRecorded recorded => purged.Contains(recorded.Entry.Id),
-            EntryVoided voided => purged.Contains(voided.EntryId),
-            EntryApproved approved => purged.Contains(approved.EntryId),
-            EntryDeleted deleted => purged.Contains(deleted.EntryId),
-            EntryRestored restored => purged.Contains(restored.EntryId),
-            _ => false
-        }).Select(e => e.Id).ToList();
+        List<string> drop = events.Values
+            .Where(e => e.Change is not EntryPurged && EntryChanges.EntryIdOf(e.Change) is string id && purged.Contains(id))
+            .Select(e => e.Id)
+            .ToList();
 
         if (drop.Count > 0)
         {

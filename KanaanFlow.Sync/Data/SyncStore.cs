@@ -407,6 +407,8 @@ public sealed class SyncStore
         await LockLogAsync(connection, tx);
 
         HashSet<string> known = await ExistingIdsAsync(connection, tx, incoming.Select(e => e.Id).ToList());
+        HashSet<string> purged = await PurgedAmongAsync(
+            connection, tx, incoming.Select(e => EntryChanges.EntryIdOf(e.Change)).OfType<string>().Distinct().ToList());
         foreach (BookEvent bookEvent in incoming)
         {
             if (known.Contains(bookEvent.Id))
@@ -416,14 +418,14 @@ public sealed class SyncStore
             }
 
             // Every change is tied to the person who made it, so nobody can record in someone else's name.
-            string? entryId = EntryIdOf(bookEvent.Change);
+            string? entryId = EntryChanges.EntryIdOf(bookEvent.Change);
             string? reason = bookEvent.AtUtc > DateTime.UtcNow.AddDays(1)
                 ? "time-in-future"
                 : bookEvent.Actor != member.Id
                 ? "wrong-actor"
-                : entryId != null && await IsPurgedAsync(connection, tx, entryId)
+                : entryId != null && purged.Contains(entryId)
                 ? "entry-purged"
-                : bookEvent.Change is EntryDeleted && await IsLoanPrincipalAsync(connection, tx, ((EntryDeleted)bookEvent.Change).EntryId)
+                : (bookEvent.Change is EntryDeleted || bookEvent.Change is EntryPurged) && await IsLoanPrincipalAsync(connection, tx, entryId!)
                 ? "cannot-delete-loan-entry"
                 : ChangePolicy.Check(
                     role,
@@ -443,6 +445,7 @@ public sealed class SyncStore
             accepted.Add(bookEvent.Id);
             if (bookEvent.Change is EntryPurged purge)
             {
+                purged.Add(purge.EntryId);
                 int removed = await PurgeEntryAsync(connection, tx, purge.EntryId);
                 logger.LogWarning("{Name} permanently deleted entry {EntryId} ({Removed} events removed).", member.Name, purge.EntryId, removed);
             }
@@ -623,23 +626,20 @@ public sealed class SyncStore
         return found;
     }
 
-    /// <summary>The entry a change is about, when it is about one.</summary>
-    private static string? EntryIdOf(BookChange change) => change switch
+    /// <summary>Which of these entries were deleted for good.</summary>
+    private static async Task<HashSet<string>> PurgedAmongAsync(NpgsqlConnection connection, NpgsqlTransaction tx, List<string> entryIds)
     {
-        EntryRecorded recorded => recorded.Entry.Id,
-        EntryVoided voided => voided.EntryId,
-        EntryApproved approved => approved.EntryId,
-        EntryDeleted deleted => deleted.EntryId,
-        EntryRestored restored => restored.EntryId,
-        _ => null
-    };
-
-    private static async Task<bool> IsPurgedAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
-    {
+        HashSet<string> found = new HashSet<string>();
         await using NpgsqlCommand command = new NpgsqlCommand(
-            "select exists (select 1 from events where kind = 'entry.purged' and payload -> 'change' ->> 'entryId' = @id)", connection, tx);
-        command.Parameters.AddWithValue("id", entryId);
-        return (bool)(await command.ExecuteScalarAsync())!;
+            "select payload -> 'change' ->> 'entryId' from events where kind = 'entry.purged' and payload -> 'change' ->> 'entryId' = any(@ids)", connection, tx);
+        command.Parameters.AddWithValue("ids", entryIds.ToArray());
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            found.Add(reader.GetString(0));
+        }
+
+        return found;
     }
 
     private static async Task<bool> IsLoanPrincipalAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)

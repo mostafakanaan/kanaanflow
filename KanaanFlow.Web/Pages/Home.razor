@@ -49,7 +49,7 @@ else
     <div class="list-card">
         @foreach (Entry entry in todayEntries.Take(showAll ? todayEntries.Count : Preview))
         {
-            <EntryRow Entry="entry" />
+            <EntryRow @key="entry.Id" Entry="entry" />
         }
         @if (todayEntries.Count == 0)
         {

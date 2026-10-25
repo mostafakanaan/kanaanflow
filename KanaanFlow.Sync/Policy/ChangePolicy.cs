@@ -36,7 +36,7 @@ public static class ChangePolicy
 
         if (change is EntryDeleted || change is EntryRestored)
         {
-            return RoleRules.CanDelete(role) ? null : "accountant-only";
+            return RoleRules.CanDelete(role) ? null : "delete-not-allowed";
         }
 
         if (change is EntryPurged)

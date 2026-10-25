@@ -40,6 +40,9 @@ public sealed class DeviceSettings
     /// <summary>Highest server sequence number already pulled.</summary>
     public long PulledSeq { get; set; }
 
+    /// <summary>The app build that last pulled. A new build pulls everything once, to read changes an older one skipped.</summary>
+    public string PulledWithBuild { get; set; } = string.Empty;
+
     public DateTime? LastSyncUtc { get; set; }
 
     public bool SignedIn => !string.IsNullOrEmpty(Token);

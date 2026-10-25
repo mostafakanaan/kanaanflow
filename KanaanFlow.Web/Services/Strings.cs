@@ -387,6 +387,7 @@ public static class Strings
         ["kind-entry.deleted"] = "وضع علامة محذوفة على حركة",
         ["kind-entry.restored"] = "استرجع حركة",
         ["kind-entry.purged"] = "حذف حركة نهائياً",
+        ["err-delete-not-allowed"] = "حذف الحركات للمحاسب والمدير فقط",
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -748,5 +749,6 @@ public static class Strings
         ["kind-entry.deleted"] = "marked an entry as deleted",
         ["kind-entry.restored"] = "restored an entry",
         ["kind-entry.purged"] = "permanently deleted an entry",
+        ["err-delete-not-allowed"] = "Only Accountants and Admins can delete entries",
     };
 }

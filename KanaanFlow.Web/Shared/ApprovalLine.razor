@@ -15,7 +15,7 @@
             <span>@T("awaitingApproval")</span>
             @if (Books.CanApprove && Entry.CreatedBy != Books.Settings.MemberId && !Entry.IsDeleted)
             {
-                <button type="button" class="approve-btn" @onclick="ApproveAsync" @onclick:stopPropagation="true">@T("approve")</button>
+                <button type="button" class="approve-btn" @onclick="ApproveAsync" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">@T("approve")</button>
             }
         }
     </span>

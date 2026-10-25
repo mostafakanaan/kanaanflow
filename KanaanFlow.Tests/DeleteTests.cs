@@ -71,7 +71,7 @@ public class DeleteTests
     }
 
     [Theory]
-    [InlineData(TeamRole.Owner, "accountant-only", "admin-only")]
+    [InlineData(TeamRole.Owner, "delete-not-allowed", "admin-only")]
     [InlineData(TeamRole.Accountant, null, "admin-only")]
     [InlineData(TeamRole.Admin, null, null)]
     [InlineData(TeamRole.Viewer, "view-only", "view-only")]

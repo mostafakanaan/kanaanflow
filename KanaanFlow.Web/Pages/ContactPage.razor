@@ -98,7 +98,7 @@ else
         <div class="list-card">
             @foreach (Entry entry in history)
             {
-                <EntryRow Entry="entry" WithDate="true" ForContact="true" />
+                <EntryRow @key="entry.Id" Entry="entry" WithDate="true" ForContact="true" />
             }
             @if (history.Count == 0)
             {

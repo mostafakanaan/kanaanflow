@@ -5,7 +5,7 @@
 
 @if (!Books.CanDelete)
 {
-    <p class="notice">@T("err-accountant-only")</p>
+    <p class="notice">@T("err-delete-not-allowed")</p>
 }
 else
 {
@@ -20,7 +20,7 @@ else
         <div class="list-card">
             @foreach (Entry entry in Book.DeletedEntries)
             {
-                <EntryRow Entry="entry" WithDate="true" />
+                <EntryRow @key="entry.Id" Entry="entry" WithDate="true" />
             }
         </div>
 
