@@ -27,6 +27,8 @@ public abstract class KfComponent : ComponentBase, IDisposable
 
     protected string T(string key) => Books.T(key);
 
+    protected string T(string key, int number) => Books.T(key, number);
+
     protected string Sym(Currency currency) => Books.Sym(currency);
 
     public virtual void Dispose()

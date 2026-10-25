@@ -262,7 +262,7 @@ public sealed class SyncService : IDisposable
 
         if (refused > 0)
         {
-            toasts.Show(book.T("refusedChanges").Replace("{0}", refused.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            toasts.Show(book.T("refusedChanges", refused));
         }
     }
 

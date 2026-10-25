@@ -25,7 +25,7 @@
     @if (Sync.HoldingUploads)
     {
         <div class="add-panel" role="alert">
-            <p style="font-size:16px;line-height:1.5">@T("holdQuestion").Replace("{0}", Books.ForeignUnsyncedEvents().Count.ToString(System.Globalization.CultureInfo.InvariantCulture))</p>
+            <p style="font-size:16px;line-height:1.5">@T("holdQuestion", Books.ForeignUnsyncedEvents().Count)</p>
             <div class="grid-2">
                 <button type="button" class="btn btn-ghost" @onclick="() => Sync.ResolveHeldAsync(false)">@T("holdDiscard")</button>
                 <button type="button" class="btn btn-primary" @onclick="() => Sync.ResolveHeldAsync(true)">@T("holdUpload")</button>

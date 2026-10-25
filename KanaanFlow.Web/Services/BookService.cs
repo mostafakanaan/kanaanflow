@@ -80,6 +80,9 @@ public sealed class BookService
         return table.TryGetValue(key, out string? text) ? text : key;
     }
 
+    /// <summary>Text with a number in place of "{0}".</summary>
+    public string T(string key, int number) => T(key).Replace("{0}", number.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
     public async Task LoadAsync()
     {
         string? settingsJson = await store.GetMetaAsync(SettingsKey);

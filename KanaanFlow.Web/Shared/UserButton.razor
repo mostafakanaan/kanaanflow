@@ -35,7 +35,7 @@
     @if (confirmLogout)
     {
         <div class="add-panel" role="alert">
-            <p style="font-size:16px;line-height:1.5">@T("logoutPending").Replace("{0}", Books.MyUnsyncedEvents().Count.ToString(System.Globalization.CultureInfo.InvariantCulture))</p>
+            <p style="font-size:16px;line-height:1.5">@T("logoutPending", Books.MyUnsyncedEvents().Count)</p>
             <div class="grid-2">
                 <button type="button" class="btn btn-ghost" @onclick="() => confirmLogout = false">@T("cancel")</button>
                 <button type="button" class="btn btn-primary" @onclick="LogOutNowAsync">@T("logOut")</button>

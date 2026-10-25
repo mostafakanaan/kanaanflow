@@ -71,10 +71,18 @@ window.kf = (() => {
             document.documentElement.dir = dir;
         },
         scrollTop: () => { const m = document.querySelector('.kf-main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); },
-        print: () => setTimeout(() => window.print(), 50),
+        // Inside the Android app, the native bridge prints (and saves PDFs) through Android's print service.
+        print: () => setTimeout(() => window.KanaanFlowAndroid ? window.KanaanFlowAndroid.print() : window.print(), 50),
 
         // ---- files ----
+        // Returns false when the file could not be saved.
         download: (name, mime, bytes) => {
+            if (window.KanaanFlowAndroid) {
+                // The Android app's WebView can't download blobs: hand the file to the app, which shares or saves it.
+                let binary = '';
+                for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+                return window.KanaanFlowAndroid.saveFile(name, mime, btoa(binary));
+            }
             const blob = new Blob([bytes], { type: mime });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -84,8 +92,10 @@ window.kf = (() => {
             a.click();
             a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 10000);
+            return true;
         },
         canShareFiles: () => {
+            if (window.KanaanFlowAndroid) return false;
             try { return !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'x.txt', { type: 'text/plain' })] })); }
             catch { return false; }
         },
@@ -99,7 +109,7 @@ window.kf = (() => {
 
         // ---- install ----
         canInstall: () => installEvent !== null,
-        isStandalone: () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+        isStandalone: () => !!window.KanaanFlowAndroid || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
         isIos: () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
         install: async () => {
             if (!installEvent) return false;
