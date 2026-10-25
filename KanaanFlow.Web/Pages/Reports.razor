@@ -113,7 +113,7 @@
         <div class="list-card">
             @foreach (Entry entry in result.Entries.Take(shown))
             {
-                <EntryRow Entry="entry" WithDate="true" />
+                <EntryRow @key="entry.Id" Entry="entry" WithDate="true" />
             }
         </div>
         @if (result.Entries.Count > shown)

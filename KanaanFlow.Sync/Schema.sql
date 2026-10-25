@@ -26,7 +26,8 @@ create table if not exists sessions (
 
 create index if not exists sessions_member on sessions (member_id);
 
--- The append-only event log: the book's source of truth. Rows are never updated or deleted.
+-- The append-only event log: the book's source of truth. Rows are never updated; they are only deleted when an Admin
+-- permanently deletes an entry (entry.purged), which removes that entry's events and keeps the tombstone.
 create table if not exists events (
     seq         bigserial   primary key,
     id          text        not null unique,
@@ -39,4 +40,5 @@ create table if not exists events (
 );
 
 create index if not exists events_recorded_entry on events ((payload -> 'change' -> 'entry' ->> 'id')) where kind = 'entry.recorded';
+create index if not exists events_about_entry on events ((payload -> 'change' ->> 'entryId'));
 create index if not exists events_opened_loan on events ((payload -> 'change' -> 'loan' ->> 'id')) where kind = 'loan.opened';

@@ -497,3 +497,17 @@ h1:focus { outline: none; }
 /* ---------- approvals panel ---------- */
 .approvals-btn.has { border-color: #F0C6AC; background: var(--out-bg); color: #A35A12; }
 .sheet-list { max-height: 50dvh; overflow-y: auto; }
+
+/* ---------- entry details and deleting ---------- */
+.row-tap { cursor: pointer; }
+.row-tap:hover { background: var(--soft); }
+.detail-amount { font-size: 30px; font-weight: 700; text-align: center; padding: 4px 0; }
+.details { display: grid; grid-template-columns: max-content 1fr; gap: 8px 14px; margin: 0; font-size: 16px; }
+.details dt { color: var(--muted); font-weight: 600; }
+.details dd { margin: 0; overflow-wrap: anywhere; }
+.details dd .approval { margin-top: 0; }
+.detail-actions { display: flex; flex-direction: column; gap: 10px; }
+.danger-text { color: var(--out); border-color: #F0C6AC; }
+.add-panel.danger { border-color: var(--out); }
+.hub-tile .count-pill { background: var(--out); }
+.add-panel .grid-2 .btn { height: auto; min-height: 52px; padding: 8px 10px; white-space: normal; line-height: 1.25; }

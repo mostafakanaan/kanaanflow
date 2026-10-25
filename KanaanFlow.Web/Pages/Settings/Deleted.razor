@@ -1,0 +1,67 @@
+@page "/more/deleted"
+@inherits KfComponent
+
+<SettingsHeader Title="@T("deletedEntries")" />
+
+@if (!Books.CanDelete)
+{
+    <p class="notice">@T("err-delete-not-allowed")</p>
+}
+else
+{
+    <p class="muted" style="font-size:15px;line-height:1.5">@T(Books.CanPurge ? "deletedIntroAdmin" : "deletedIntro")</p>
+
+    @if (Book.DeletedEntries.Count == 0)
+    {
+        <p class="empty"><Icon Name="check" Size="22" /> @T("noDeleted")</p>
+    }
+    else
+    {
+        <div class="list-card">
+            @foreach (Entry entry in Book.DeletedEntries)
+            {
+                <EntryRow @key="entry.Id" Entry="entry" WithDate="true" />
+            }
+        </div>
+
+        @if (Books.CanPurge)
+        {
+            @if (confirming)
+            {
+                <div class="add-panel danger" role="alert">
+                    <p style="font-size:17px;font-weight:600;line-height:1.5">@T("purgeAllConfirm", Book.DeletedEntries.Count)</p>
+                    <div class="grid-2">
+                        <button type="button" class="btn btn-ghost" @onclick="() => confirming = false">@T("cancel")</button>
+                        <button type="button" class="btn btn-out" disabled="@busy" @onclick="PurgeAllAsync">@T("purgeAllYes", Book.DeletedEntries.Count)</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-ghost danger-text" @onclick="() => confirming = true"><Icon Name="trash" Size="22" />@T("purgeAll", Book.DeletedEntries.Count)</button>
+            }
+        }
+    }
+}
+
+@code {
+    private bool confirming;
+    private bool busy;
+
+    private async Task PurgeAllAsync()
+    {
+        busy = true;
+        try
+        {
+            List<Entry> all = Book.DeletedEntries.ToList();
+            // One step: one local write and one upload for all of them.
+            await Books.RecordAsync(all.Select(e => (BookChange)new EntryPurged { EntryId = e.Id }).ToArray());
+            Toasts.Show(T("purgedN", all.Count));
+            confirming = false;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

@@ -1,7 +1,7 @@
 @inherits KfComponent
 
 @* One entry in a list: arrow + word + signed amount, so color is never the only signal. *@
-<div class="row">
+<div class="row row-tap" role="button" tabindex="0" aria-haspopup="dialog" @onclick="() => open = true" @onkeydown="OnKey">
     @if (Entry.Type == EntryType.Exchange)
     {
         <span class="row-ic fx"><Icon Name="fx" Size="22" Stroke="2.2" /></span>
@@ -24,8 +24,22 @@
         <span class="sr-only">@(isIn ? T("received") : T("paid"))</span>
     }
 </div>
+@if (open)
+{
+    <EntrySheet Entry="Entry" Open="true" OnClose="() => open = false" />
+}
 
 @code {
+    private bool open;
+
+    private void OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            open = true;
+        }
+    }
+
     [Parameter, EditorRequired]
     public Entry Entry { get; set; } = default!;
 

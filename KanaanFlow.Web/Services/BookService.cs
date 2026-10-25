@@ -67,6 +67,10 @@ public sealed class BookService
 
     public bool IsAdmin => IsLoggedIn && MyRole == TeamRole.Admin;
 
+    public bool CanDelete => IsLoggedIn && RoleRules.CanDelete(MyRole);
+
+    public bool CanPurge => IsLoggedIn && RoleRules.CanPurge(MyRole);
+
     /// <summary>Name of the team member with this id ("—" when unknown).</summary>
     public string MemberName(string? id)
     {
@@ -263,6 +267,12 @@ public sealed class BookService
         }
 
         await store.PutEventsAsync(rows);
+        if (Settings.LocalOnly)
+        {
+            // No server to refuse it: remove the entry's events now. Signed in, that waits until the server accepts.
+            await RemovePurgedAsync(changes);
+        }
+
         Rebuild();
         Changed?.Invoke();
         LocalChange?.Invoke();
@@ -287,6 +297,7 @@ public sealed class BookService
         if (rows.Count > 0)
         {
             await store.PutEventsAsync(rows);
+            await RemovePurgedAsync(incoming.Select(e => e.Change));
             Rebuild();
             Changed?.Invoke();
         }
@@ -313,6 +324,9 @@ public sealed class BookService
             unsynced.Remove(id);
         }
 
+        // Purges the server accepted: the server has removed the entry, so this device does too.
+        await RemovePurgedAsync(ids.Where(events.ContainsKey).Select(id => events[id].Change).ToList());
+        Rebuild();
         Changed?.Invoke();
     }
 
@@ -374,6 +388,34 @@ public sealed class BookService
     }
 
     public static string NewId() => Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// An entry deleted for good: removes it and every change about it from this device, keeping only the purge itself
+    /// (the tombstone that tells other devices to do the same).
+    /// </summary>
+    private async Task RemovePurgedAsync(IEnumerable<BookChange> changes)
+    {
+        HashSet<string> purged = changes.OfType<EntryPurged>().Select(p => p.EntryId).ToHashSet();
+        if (purged.Count == 0)
+        {
+            return;
+        }
+
+        List<string> drop = events.Values
+            .Where(e => e.Change is not EntryPurged && EntryChanges.EntryIdOf(e.Change) is string id && purged.Contains(id))
+            .Select(e => e.Id)
+            .ToList();
+
+        if (drop.Count > 0)
+        {
+            await store.DeleteEventsAsync(drop);
+            foreach (string id in drop)
+            {
+                events.Remove(id);
+                unsynced.Remove(id);
+            }
+        }
+    }
 
     private void Rebuild()
     {

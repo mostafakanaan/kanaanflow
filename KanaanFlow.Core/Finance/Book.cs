@@ -16,6 +16,9 @@ public sealed class Book
     /// <summary>Entries that have not been undone, newest first.</summary>
     public List<Entry> Entries { get; } = new List<Entry>();
 
+    /// <summary>Entries marked as deleted: they don't count anywhere until restored. Newest first.</summary>
+    public List<Entry> DeletedEntries { get; } = new List<Entry>();
+
     public List<Loan> Loans { get; } = new List<Loan>();
 
     public List<PeopleCategory> PeopleCategories { get; } = DefaultCategories.People();
@@ -42,16 +45,19 @@ public sealed class Book
     /// <summary>Puts entries in display order: newest day first, then newest recorded first.</summary>
     public void SortEntries()
     {
-        Entries.Sort((a, b) =>
-        {
-            int byDate = b.Date.CompareTo(a.Date);
-            if (byDate != 0)
-            {
-                return byDate;
-            }
+        Entries.Sort(Newest);
+        DeletedEntries.Sort(Newest);
+    }
 
-            int byCreated = b.CreatedUtc.CompareTo(a.CreatedUtc);
-            return byCreated != 0 ? byCreated : string.CompareOrdinal(b.Id, a.Id);
-        });
+    private static int Newest(Entry a, Entry b)
+    {
+        int byDate = b.Date.CompareTo(a.Date);
+        if (byDate != 0)
+        {
+            return byDate;
+        }
+
+        int byCreated = b.CreatedUtc.CompareTo(a.CreatedUtc);
+        return byCreated != 0 ? byCreated : string.CompareOrdinal(b.Id, a.Id);
     }
 }

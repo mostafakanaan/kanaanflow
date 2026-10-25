@@ -34,6 +34,16 @@ public static class ChangePolicy
             return RoleRules.CanApprove(role) ? null : "accountant-only";
         }
 
+        if (change is EntryDeleted || change is EntryRestored)
+        {
+            return RoleRules.CanDelete(role) ? null : "delete-not-allowed";
+        }
+
+        if (change is EntryPurged)
+        {
+            return RoleRules.CanPurge(role) ? null : "admin-only";
+        }
+
         if (RoleRules.CanManageBook(role))
         {
             return null;

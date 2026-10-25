@@ -407,6 +407,8 @@ public sealed class SyncStore
         await LockLogAsync(connection, tx);
 
         HashSet<string> known = await ExistingIdsAsync(connection, tx, incoming.Select(e => e.Id).ToList());
+        HashSet<string> purged = await PurgedAmongAsync(
+            connection, tx, incoming.Select(e => EntryChanges.EntryIdOf(e.Change)).OfType<string>().Distinct().ToList());
         foreach (BookEvent bookEvent in incoming)
         {
             if (known.Contains(bookEvent.Id))
@@ -416,10 +418,15 @@ public sealed class SyncStore
             }
 
             // Every change is tied to the person who made it, so nobody can record in someone else's name.
+            string? entryId = EntryChanges.EntryIdOf(bookEvent.Change);
             string? reason = bookEvent.AtUtc > DateTime.UtcNow.AddDays(1)
                 ? "time-in-future"
                 : bookEvent.Actor != member.Id
                 ? "wrong-actor"
+                : entryId != null && purged.Contains(entryId)
+                ? "entry-purged"
+                : (bookEvent.Change is EntryDeleted || bookEvent.Change is EntryPurged) && await IsLoanPrincipalAsync(connection, tx, entryId!)
+                ? "cannot-delete-loan-entry"
                 : ChangePolicy.Check(
                     role,
                     member.Id,
@@ -436,6 +443,12 @@ public sealed class SyncStore
             await InsertEventAsync(connection, tx, bookEvent, member.Id);
             known.Add(bookEvent.Id);
             accepted.Add(bookEvent.Id);
+            if (bookEvent.Change is EntryPurged purge)
+            {
+                purged.Add(purge.EntryId);
+                int removed = await PurgeEntryAsync(connection, tx, purge.EntryId);
+                logger.LogWarning("{Name} permanently deleted entry {EntryId} ({Removed} events removed).", member.Name, purge.EntryId, removed);
+            }
         }
 
         await tx.CommitAsync();
@@ -611,6 +624,41 @@ public sealed class SyncStore
         }
 
         return found;
+    }
+
+    /// <summary>Which of these entries were deleted for good.</summary>
+    private static async Task<HashSet<string>> PurgedAmongAsync(NpgsqlConnection connection, NpgsqlTransaction tx, List<string> entryIds)
+    {
+        HashSet<string> found = new HashSet<string>();
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "select payload -> 'change' ->> 'entryId' from events where kind = 'entry.purged' and payload -> 'change' ->> 'entryId' = any(@ids)", connection, tx);
+        command.Parameters.AddWithValue("ids", entryIds.ToArray());
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            found.Add(reader.GetString(0));
+        }
+
+        return found;
+    }
+
+    private static async Task<bool> IsLoanPrincipalAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "select exists (select 1 from events where kind = 'entry.recorded' and payload -> 'change' -> 'entry' ->> 'id' = @id "
+            + "and (payload -> 'change' -> 'entry' ->> 'isLoanPrincipal')::boolean)", connection, tx);
+        command.Parameters.AddWithValue("id", entryId);
+        return (bool)(await command.ExecuteScalarAsync())!;
+    }
+
+    /// <summary>Removes an entry and every change about it from the log, keeping only the purge tombstone.</summary>
+    private static async Task<int> PurgeEntryAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string entryId)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand(
+            "delete from events where (kind = 'entry.recorded' and payload -> 'change' -> 'entry' ->> 'id' = @id) "
+            + "or (kind <> 'entry.purged' and payload -> 'change' ->> 'entryId' = @id)", connection, tx);
+        command.Parameters.AddWithValue("id", entryId);
+        return await command.ExecuteNonQueryAsync();
     }
 
     private static string? OwnerOf(NpgsqlConnection connection, NpgsqlTransaction tx, string kind, string property, string id)

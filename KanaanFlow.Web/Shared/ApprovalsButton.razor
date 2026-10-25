@@ -22,7 +22,7 @@
             <div class="list-card sheet-list">
                 @foreach (Entry entry in pending)
                 {
-                    <EntryRow Entry="entry" WithDate="true" />
+                    <EntryRow @key="entry.Id" Entry="entry" WithDate="true" />
                 }
             </div>
 

@@ -19,6 +19,10 @@ public static class BookProjector
         Dictionary<string, Entry> entries = new Dictionary<string, Entry>();
         Dictionary<string, BookEvent> approvals = new Dictionary<string, BookEvent>();
 
+        // The latest delete or restore per entry, and entries deleted for good.
+        Dictionary<string, BookEvent> deletions = new Dictionary<string, BookEvent>();
+        HashSet<string> purged = new HashSet<string>();
+
         IEnumerable<BookEvent> ordered = events
             .OrderBy(e => e.AtUtc)
             .ThenBy(e => e.Id, StringComparer.Ordinal);
@@ -29,6 +33,35 @@ public static class BookProjector
             if (bookEvent.Change is EntryApproved approved && !approvals.ContainsKey(approved.EntryId))
             {
                 approvals[approved.EntryId] = bookEvent;
+            }
+
+            switch (bookEvent.Change)
+            {
+                case EntryDeleted deleted:
+                    deletions[deleted.EntryId] = bookEvent;
+                    break;
+                case EntryRestored restored:
+                    deletions[restored.EntryId] = bookEvent;
+                    break;
+                case EntryPurged purge:
+                    purged.Add(purge.EntryId);
+                    break;
+            }
+        }
+
+        foreach (string id in purged)
+        {
+            entries.Remove(id);
+        }
+
+        // Applied last, like approvals: a delete that synced before its entry still counts. The latest one wins.
+        foreach ((string entryId, BookEvent deletion) in deletions)
+        {
+            if (deletion.Change is EntryDeleted deleted && entries.TryGetValue(entryId, out Entry? deletedEntry) && deletedEntry.CanBeDeleted)
+            {
+                deletedEntry.DeletedBy = deletion.Actor;
+                deletedEntry.DeletedUtc = deletion.AtUtc;
+                deletedEntry.DeleteReason = deleted.Reason;
             }
         }
 
@@ -49,7 +82,9 @@ public static class BookProjector
             }
         }
 
-        book.Entries.AddRange(entries.Values.Where(e => !voidedEntries.Contains(e.Id) && (e.LoanId == null || !voidedLoans.Contains(e.LoanId))));
+        List<Entry> kept = entries.Values.Where(e => !voidedEntries.Contains(e.Id) && (e.LoanId == null || !voidedLoans.Contains(e.LoanId))).ToList();
+        book.Entries.AddRange(kept.Where(e => !e.IsDeleted));
+        book.DeletedEntries.AddRange(kept.Where(e => e.IsDeleted));
         book.SortEntries();
         return book;
     }

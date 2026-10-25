@@ -1,0 +1,151 @@
+@inherits KfComponent
+
+@* One entry's details, with what the person may do with it: approve, mark as deleted, restore, delete for good. *@
+<Sheet Open="Open" Title="@Title" OnClose="CloseAsync">
+    <div class="detail-amount @(Entry.Type == EntryType.In ? "c-in" : Entry.Type == EntryType.Out ? "c-out" : null)">
+        @if (Entry.Type == EntryType.Exchange)
+        {
+            <span class="ltr">@Fmt.Money(Entry.Amount) @Sym(Entry.Currency) → @Fmt.Money(Entry.ToAmount) @Sym(Entry.ToCurrency)</span>
+        }
+        else
+        {
+            <span class="ltr">@Fmt.Signed(Entry.Amount, Entry.Type == EntryType.In) @Sym(Entry.Currency)</span>
+        }
+    </div>
+
+    <dl class="details">
+        @if (Entry.ContactId != null)
+        {
+            <dt>@T("personCol")</dt><dd>@Books.ContactName(Entry.ContactId)</dd>
+        }
+        <dt>@T("category")</dt><dd>@Books.EntryCategoryName(Entry.CategoryId)</dd>
+        <dt>@T("date")</dt><dd>@Books.DateText(Entry.Date)@(Entry.Time.Length > 0 ? " · " + Entry.Time : string.Empty)</dd>
+        @if (Entry.Note.Length > 0)
+        {
+            <dt>@T("noteCol")</dt><dd>@Entry.Note</dd>
+        }
+        <dt>@T("recordedBy")</dt><dd>@Books.MemberName(Entry.CreatedBy)</dd>
+        @if (Entry.NeedsApproval && (Entry.ApprovedBy != null || !Entry.IsDeleted))
+        {
+            <dt>@T("approval")</dt><dd><ApprovalLine Entry="Entry" /></dd>
+        }
+        @if (Entry.IsDeleted)
+        {
+            <dt>@T("deletedBy")</dt><dd>@Books.MemberName(Entry.DeletedBy) · @When(Entry.DeletedUtc)@(Entry.DeleteReason.Length > 0 ? " · " + Entry.DeleteReason : string.Empty)</dd>
+        }
+    </dl>
+
+    @if (confirm == Confirm.Delete)
+    {
+        <div class="add-panel" role="alert">
+            <p style="font-size:16px;line-height:1.5">@T("deleteConfirm")</p>
+            <label class="field" style="font-size:15px">@T("deleteReason")
+                <input class="input" type="text" @bind="reason" placeholder="@T("deleteReasonPh")" />
+            </label>
+            <div class="grid-2">
+                <button type="button" class="btn btn-ghost" @onclick="() => confirm = Confirm.None">@T("cancel")</button>
+                <button type="button" class="btn btn-out" disabled="@busy" @onclick="DeleteAsync">@T("markDeleted")</button>
+            </div>
+        </div>
+    }
+    else if (confirm == Confirm.Purge)
+    {
+        <div class="add-panel danger" role="alert">
+            <p style="font-size:16px;line-height:1.5">@T("purgeConfirm")</p>
+            <div class="grid-2">
+                <button type="button" class="btn btn-ghost" @onclick="() => confirm = Confirm.None">@T("cancel")</button>
+                <button type="button" class="btn btn-out" disabled="@busy" @onclick="PurgeAsync">@T("purgeYes")</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="detail-actions">
+            @if (Entry.IsDeleted && Books.CanDelete)
+            {
+                <button type="button" class="btn btn-outline" disabled="@busy" @onclick="RestoreAsync"><Icon Name="back" Size="20" Class="flip" />@T("restore")</button>
+            }
+            else if (!Entry.IsDeleted && Books.CanDelete && Entry.CanBeDeleted)
+            {
+                <button type="button" class="btn btn-ghost" @onclick="() => confirm = Confirm.Delete"><Icon Name="trash" Size="20" />@T("markDeleted")</button>
+            }
+
+            @if (Books.CanPurge && Entry.CanBeDeleted)
+            {
+                <button type="button" class="btn btn-ghost danger-text" @onclick="() => confirm = Confirm.Purge"><Icon Name="trash" Size="20" />@T("purge")</button>
+            }
+        </div>
+        @if (!Entry.CanBeDeleted && Books.CanDelete)
+        {
+            <p class="muted small">@T("err-cannot-delete-loan-entry")</p>
+        }
+    }
+</Sheet>
+
+@code {
+    private enum Confirm
+    {
+        None,
+        Delete,
+        Purge
+    }
+
+    private Confirm confirm;
+    private bool busy;
+    private string reason = string.Empty;
+
+    [Parameter, EditorRequired]
+    public Entry Entry { get; set; } = default!;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private string Title => Entry.Type switch
+    {
+        EntryType.In => T("received"),
+        EntryType.Out => T("paid"),
+        _ => T("exchanged")
+    } + (Entry.IsDeleted ? " · " + T("deletedTag") : string.Empty);
+
+    private string When(DateTime? utc)
+    {
+        if (utc is not DateTime value)
+        {
+            return string.Empty;
+        }
+
+        DateTime local = value.ToLocalTime();
+        return Books.DayLabel(DateOnly.FromDateTime(local)) + " " + local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private async Task CloseAsync()
+    {
+        confirm = Confirm.None;
+        reason = string.Empty;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task RunAsync(BookChange change, string done)
+    {
+        busy = true;
+        try
+        {
+            await Books.RecordAsync(change);
+            Toasts.Show(done);
+            await CloseAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private Task DeleteAsync() => RunAsync(new EntryDeleted { EntryId = Entry.Id, Reason = reason.Trim() }, T("markedDeleted"));
+
+    private Task RestoreAsync() => RunAsync(new EntryRestored { EntryId = Entry.Id }, T("restored"));
+
+    private Task PurgeAsync() => RunAsync(new EntryPurged { EntryId = Entry.Id }, T("purged"));
+}
