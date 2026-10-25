@@ -26,6 +26,11 @@
         get
         {
             yield return ("more/users", "people", "tileUsers", "tileUsersSub");
+            if (Books.CanManageBook)
+            {
+                yield return ("salaries", "wallet", "salaries", "salariesSub");
+            }
+
             yield return ("more/categories", "tag", "tileCategories", "tileCategoriesSub");
             yield return ("more/entities", "folder", "tileEntities", "tileEntitiesSub");
             yield return ("more/balances", "wallet", "tileBalances", "tileBalancesSub");

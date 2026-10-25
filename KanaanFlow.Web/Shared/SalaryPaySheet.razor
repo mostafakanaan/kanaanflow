@@ -1,0 +1,67 @@
+@inherits KfComponent
+
+@* Pays (part of) one month of an employee's salary. It is recorded as money paid out, under Wages. *@
+<Sheet Open="true" Title="@(T("paySalary") + " · " + Fmt.Month(Status.Month, Lang))" OnClose="() => OnClose.InvokeAsync()">
+    <p class="muted" style="font-size:16px">@Books.ContactName(ContactId) · @T("salaryDue") <span class="ltr">@Fmt.Money(Status.Due) @Sym(Status.Currency)</span>@(Status.Paid > 0 ? " · " + T("salaryAlreadyPaid") + " " : string.Empty)@if (Status.Paid > 0) {<span class="ltr">@Fmt.Money(Status.Paid) @Sym(Status.Currency)</span>}</p>
+    <label class="field">@T("amount") (@Fmt.LongName(Status.Currency, Lang))
+        <input class="input ltr" style="font-size:24px;font-weight:700;text-align:center" inputmode="decimal" @bind="amountText" @bind:event="oninput" />
+    </label>
+    <label class="field">@T("date")
+        <input class="input" type="date" @bind="date" max="@Fmt.Iso(Today)" />
+    </label>
+    <label class="field">@T("noteCol")
+        <input class="input" type="text" @bind="note" placeholder="@T("optional")" />
+    </label>
+    @if (error.Length > 0)
+    {
+        <p class="err-text" role="alert">@error</p>
+    }
+    <button type="button" class="btn btn-out btn-tall" disabled="@busy" @onclick="PayAsync"><Icon Name="out" Size="22" />@T("paySalary")</button>
+</Sheet>
+
+@code {
+    private string amountText = string.Empty;
+    private DateOnly date;
+    private string note = string.Empty;
+    private string error = string.Empty;
+    private bool busy;
+
+    [Parameter, EditorRequired]
+    public string ContactId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public SalaryMonthStatus Status { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        amountText = Fmt.Money(Status.Remaining > 0 ? Status.Remaining : Status.Due);
+        date = Today;
+    }
+
+    private async Task PayAsync()
+    {
+        decimal? amount = Fmt.ParseAmount(amountText);
+        if (amount is not > 0m)
+        {
+            error = T("enterAmount");
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            Entry entry = Books.SalaryPayment(ContactId, Status.Month, amount.Value, Status.Currency, date, note);
+            await Books.RecordAsync(new EntryRecorded { Entry = entry });
+            Toasts.Show(T("salaryPaidToast") + " · " + Books.ContactName(ContactId) + " · " + Fmt.Money(amount.Value) + " " + Sym(Status.Currency));
+            await OnClose.InvokeAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

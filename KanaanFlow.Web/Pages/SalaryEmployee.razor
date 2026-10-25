@@ -1,0 +1,196 @@
+@page "/salaries/{Id}"
+@inherits KfComponent
+
+@if (person == null || !Books.CanManageBook)
+{
+    <a class="back-link" href="salaries"><Icon Name="back" Class="flip" Stroke="2.2" />@T("salaries")</a>
+    <p class="empty">@T(person == null ? "noMatch" : "err-salaries-managers-only")</p>
+}
+else
+{
+    <PageTitle>@person.Name · @T("salaries") · KanaanFlow</PageTitle>
+    <a class="back-link" href="salaries"><Icon Name="back" Class="flip" Stroke="2.2" />@T("salaries")</a>
+
+    <section class="contact-head">
+        <span class="avatar avatar-64" aria-hidden="true">@Fmt.Initial(person.Name)</span>
+        <span class="info">
+            <h1 class="h1" style="font-size:24px">@person.Name</h1>
+            @if (current != null && current.Amount > 0m)
+            {
+                <span class="salary-now"><span class="ltr">@Fmt.Money(current.Amount) @Sym(current.Currency)</span> @T("perMonth")</span>
+            }
+            else
+            {
+                <span class="tag">@T(current == null ? "noSalaryYet" : "salaryEnded")</span>
+            }
+        </span>
+        <a class="link-btn" href="people/@person.Id">@T("profile")</a>
+    </section>
+
+    @if (owed.Count > 0)
+    {
+        <div class="owed-card" role="status">
+            <span>@T("salaryOwed")</span>
+            <b>@foreach (KeyValuePair<Currency, decimal> o in owed) { <span class="ltr">@Fmt.Money(o.Value) @Sym(o.Key)</span> }</b>
+        </div>
+    }
+
+    @if (setting)
+    {
+        <section class="add-panel">
+            <h2 class="h3">@T(current == null ? "setSalary" : "changeSalary")</h2>
+            <label class="field">@T("monthlySalary")
+                <input class="input ltr" style="font-size:22px;font-weight:700;text-align:center" inputmode="decimal" @bind="amountText" @bind:event="oninput" placeholder="0" />
+            </label>
+            <div class="grid-4" role="group" aria-label="@T("currency")">
+                @foreach (Currency c in Book.Currencies)
+                {
+                    Currency pick = c;
+                    <button type="button" class="sel cur-chip" aria-label="@Fmt.LongName(c, Lang)" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick"><Flag Currency="c" Size="22" /><small>@Sym(c)</small></button>
+                }
+            </div>
+            <label class="field">@T("salaryFrom")
+                <input class="input" type="month" @bind="fromDate" />
+            </label>
+            @if (error.Length > 0)
+            {
+                <p class="err-text" role="alert">@error</p>
+            }
+            <div class="grid-2">
+                <button type="button" class="btn btn-ghost" @onclick="() => setting = false">@T("cancel")</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveSalaryAsync">@T("save")</button>
+            </div>
+            @if (current != null && current.Amount > 0m)
+            {
+                <button type="button" class="link-btn danger-text" style="align-self:flex-start" @onclick="StopSalaryAsync">@T("stopSalary")</button>
+            }
+        </section>
+    }
+    else
+    {
+        <button type="button" class="btn btn-soft" @onclick="StartSetting"><Icon Name="wallet" Size="22" />@T(current == null ? "setSalary" : "changeSalary")</button>
+    }
+
+    @if (months.Count > 0)
+    {
+        <section class="section">
+            <h2 class="h2">@T("salaryMonths")</h2>
+            <div class="list-card">
+                @foreach (SalaryMonthStatus m in months)
+                {
+                    SalaryMonthStatus status = m;
+                    <div class="row month-row">
+                        <span class="row-main">
+                            <span class="row-title">@Fmt.Month(status.Month, Lang)</span>
+                            <span class="row-sub">@T("salaryDue") <span class="ltr">@Fmt.Money(status.Due) @Sym(status.Currency)</span>@if (status.Payments.Count > 0) {<span> · @T("salaryPaid") <span class="ltr">@Fmt.Money(status.Paid)</span> · @string.Join(", ", status.Payments.Select(p => Books.DateText(p.Date)))</span>}</span>
+                        </span>
+                        <SalaryStateChip Status="status" />
+                        @if (status.Remaining > 0m)
+                        {
+                            <button type="button" class="pay-btn" @onclick="() => paying = status">@T("pay")</button>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    @if (Book.Salaries.TryGetValue(person.Id, out List<SalaryPeriod>? history) && history.Count > 0)
+    {
+        <section class="section">
+            <h2 class="h3">@T("salaryHistory")</h2>
+            <div class="list-card">
+                @foreach (SalaryPeriod p in history.AsEnumerable().Reverse())
+                {
+                    <div class="tbl-row cols-2">
+                        <span>@T("salaryFrom") @Fmt.Month(p.FromMonth, Lang)</span>
+                        <span class="n">@(p.Amount > 0m ? Fmt.Money(p.Amount) + " " + Sym(p.Currency) : T("salaryEnded"))</span>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    @if (paying != null)
+    {
+        <SalaryPaySheet ContactId="@person.Id" Status="paying" OnClose="() => paying = null" />
+    }
+}
+
+@code {
+    private Contact? person;
+    private SalaryPeriod? current;
+    private List<SalaryMonthStatus> months = new List<SalaryMonthStatus>();
+    private Dictionary<Currency, decimal> owed = new Dictionary<Currency, decimal>();
+    private bool setting;
+    private string amountText = string.Empty;
+    private Currency currency = Currency.USD;
+    private DateOnly fromDate;
+    private string error = string.Empty;
+    private SalaryMonthStatus? paying;
+
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>?set=1 opens the salary form straight away (coming from "Add employee").</summary>
+    [SupplyParameterFromQuery(Name = "set")]
+    public string? SetParam { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Compute();
+        if (SetParam == "1" && current == null)
+        {
+            StartSetting();
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        Compute();
+        return true;
+    }
+
+    private void Compute()
+    {
+        person = Book.FindContact(Id);
+        current = person == null ? null : SalaryCalculator.Current(Book, person.Id, Today);
+        months = person == null ? new List<SalaryMonthStatus>() : SalaryCalculator.Months(Book, person.Id, Today);
+        owed = person == null ? new Dictionary<Currency, decimal>() : SalaryCalculator.Owed(Book, person.Id, Today);
+    }
+
+    private void StartSetting()
+    {
+        setting = true;
+        error = string.Empty;
+        amountText = current != null && current.Amount > 0m ? Fmt.Money(current.Amount) : string.Empty;
+        currency = current?.Currency ?? (Enum.TryParse(Books.Settings.LastCurrency, out Currency last) ? last : Currency.USD);
+        fromDate = new DateOnly(Today.Year, Today.Month, 1);
+    }
+
+    private Task SaveSalaryAsync()
+    {
+        decimal? amount = Fmt.ParseAmount(amountText);
+        if (amount is not > 0m)
+        {
+            error = T("enterAmount");
+            return Task.CompletedTask;
+        }
+
+        return SetAsync(amount.Value, T("salarySaved"));
+    }
+
+    private Task StopSalaryAsync() => SetAsync(0m, T("salaryStopped"));
+
+    private async Task SetAsync(decimal amount, string done)
+    {
+        string fromMonth = SalaryMonths.Of(fromDate);
+
+        await Books.RecordAsync(new SalarySet
+        {
+            Salary = new SalaryPeriod { ContactId = person!.Id, FromMonth = fromMonth, Amount = amount, Currency = current?.Currency is Currency c && amount == 0m ? c : currency }
+        });
+        setting = false;
+        Toasts.Show(done + " · " + person.Name);
+    }
+}

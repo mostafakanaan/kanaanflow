@@ -20,6 +20,7 @@ using System.Text.Json.Serialization;
 [JsonDerivedType(typeof(PeopleCategorySaved), "peopleCategory.saved")]
 [JsonDerivedType(typeof(PeopleCategoryRemoved), "peopleCategory.removed")]
 [JsonDerivedType(typeof(OpeningBalanceSet), "openingBalance.set")]
+[JsonDerivedType(typeof(SalarySet), "salary.set")]
 [JsonDerivedType(typeof(MemberSaved), "member.saved")]
 [JsonDerivedType(typeof(MemberRemoved), "member.removed")]
 public abstract class BookChange
@@ -111,6 +112,12 @@ public sealed class OpeningBalanceSet : BookChange
     public Currency Currency { get; set; }
 
     public decimal Amount { get; set; }
+}
+
+/// <summary>Sets an employee's monthly salary from a month on. An amount of 0 ends it from that month.</summary>
+public sealed class SalarySet : BookChange
+{
+    public SalaryPeriod Salary { get; set; } = new SalaryPeriod();
 }
 
 public sealed class MemberSaved : BookChange

@@ -60,6 +60,11 @@ else
         </div>
     }
 
+    @if (Books.CanManageBook && Book.Salaries.ContainsKey(contact.Id))
+    {
+        <a class="btn btn-soft" href="salaries/@contact.Id"><Icon Name="wallet" Size="22" />@T("salary")</a>
+    }
+
     @if (openLoans.Count > 0)
     {
         <section class="section" style="gap:8px">

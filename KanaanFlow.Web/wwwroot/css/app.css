@@ -511,3 +511,24 @@ h1:focus { outline: none; }
 .add-panel.danger { border-color: var(--out); }
 .hub-tile .count-pill { background: var(--out); }
 .add-panel .grid-2 .btn { height: auto; min-height: 52px; padding: 8px 10px; white-space: normal; line-height: 1.25; }
+
+/* ---------- salaries ---------- */
+.month-switch { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 6px; }
+.month-switch b { font-size: 19px; }
+.month-switch .icon-btn { color: var(--navy); border-color: var(--line); }
+.month-switch .icon-btn:disabled { opacity: .35; }
+.salary-row { text-decoration: none; color: inherit; }
+.salary-row:hover { background: var(--soft); }
+.salary-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 14px; font-size: 13px; font-weight: 700; white-space: nowrap; flex: 0 0 auto; }
+.salary-chip.paid { background: var(--in-bg); color: var(--in-fg); }
+.salary-chip.partial { background: #FFF3DD; color: #8A5300; }
+.salary-chip.unpaid { background: var(--out-bg); color: var(--out-fg); }
+.month-row { flex-wrap: wrap; }
+.pay-btn { height: 38px; padding: 0 16px; border-radius: 19px; border: 2px solid var(--out); background: #fff; color: var(--out-fg); font: inherit; font-size: 15px; font-weight: 700; }
+.salary-now { font-size: 18px; font-weight: 700; color: var(--navy); }
+.owed-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 14px 16px; border-radius: 16px; background: var(--out-bg); color: var(--out-fg); font-weight: 600; }
+.owed-card b { display: flex; gap: 10px; font-size: 19px; }
+.cols-2 { grid-template-columns: 1fr auto; }
+.month-row .row-title { white-space: normal; }
+.salary-sum .tbl-row > span:first-child { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.salary-sum.cols-4, .salary-sum .cols-4 { grid-template-columns: 1fr 1.3fr 1.2fr 1.3fr; }

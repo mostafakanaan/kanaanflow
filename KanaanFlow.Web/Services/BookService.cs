@@ -387,6 +387,30 @@ public sealed class BookService
         return date == Today.AddDays(-1) ? T("yesterday") : DateText(date);
     }
 
+    /// <summary>A payment of an employee's salary for a month: money paid out, under Wages.</summary>
+    public Entry SalaryPayment(string contactId, string month, decimal amount, Currency currency, DateOnly date, string note)
+    {
+        DateOnly day = date > Today ? Today : date;
+        return new Entry
+        {
+            Id = NewId(),
+            Type = EntryType.Out,
+            Amount = amount,
+            Currency = currency,
+            ContactId = contactId,
+            CategoryId = Book.FindEntryCategory(SalaryCategoryId) != null ? SalaryCategoryId : EntryCategory.OtherId,
+            Note = note.Trim(),
+            Date = day,
+            Time = day == Today ? DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture) : string.Empty,
+            SalaryMonth = month,
+            CreatedBy = Settings.MemberId,
+            CreatedUtc = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>The entry type salary payments are filed under.</summary>
+    public const string SalaryCategoryId = "wages";
+
     public static string NewId() => Guid.NewGuid().ToString("N");
 
     /// <summary>
