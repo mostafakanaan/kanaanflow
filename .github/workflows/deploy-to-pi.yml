@@ -23,6 +23,9 @@ jobs:
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
+        env:
+          # The default (/usr/share/dotnet) isn't writable by the runner user; keep .NET in the runner's tool cache.
+          DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}/dotnet
         with:
           dotnet-version: 10.0.x
 
