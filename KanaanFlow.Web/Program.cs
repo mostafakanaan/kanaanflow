@@ -12,6 +12,7 @@ builder.Services.AddSingleton(sp => new HttpClient { Timeout = TimeSpan.FromSeco
 builder.Services.AddSingleton<LocalStore>();
 builder.Services.AddSingleton<BookService>();
 builder.Services.AddSingleton<ToastService>();
+builder.Services.AddSingleton<ApiClient>();
 builder.Services.AddSingleton<SyncService>();
 builder.Services.AddSingleton<RateService>();
 builder.Services.AddSingleton<ExportService>();

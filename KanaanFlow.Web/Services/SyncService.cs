@@ -2,12 +2,9 @@ namespace KanaanFlow.Web.Services;
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using KanaanFlow.Core.Finance.Events;
@@ -15,20 +12,18 @@ using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 /// <summary>
-/// Uploads this device's new events and downloads the team's, through a Supabase table (see docs/sync-supabase.sql).
+/// Uploads this device's new events to the team's sync server and downloads everyone else's.
 /// Events are append-only, so syncing never overwrites anyone's entries.
 /// </summary>
 public sealed class SyncService : IDisposable
 {
     private const int PageSize = 500;
 
-    // Server sequence numbers can commit slightly out of order; re-reading a small overlap avoids missing any.
-    private const long PullOverlap = 100;
-
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(60);
 
     private readonly BookService book;
-    private readonly HttpClient http;
+    private readonly ApiClient api;
+    private readonly ToastService toasts;
     private readonly IJSRuntime js;
     private readonly ILogger<SyncService> logger;
     private readonly SemaphoreSlim gate = new SemaphoreSlim(1, 1);
@@ -38,10 +33,11 @@ public sealed class SyncService : IDisposable
     private bool online = true;
     private bool rerun;
 
-    public SyncService(BookService book, HttpClient http, IJSRuntime js, ILogger<SyncService> logger)
+    public SyncService(BookService book, ApiClient api, ToastService toasts, IJSRuntime js, ILogger<SyncService> logger)
     {
         this.book = book;
-        this.http = http;
+        this.api = api;
+        this.toasts = toasts;
         this.js = js;
         this.logger = logger;
     }
@@ -49,6 +45,12 @@ public sealed class SyncService : IDisposable
     public SyncState State { get; private set; } = SyncState.LocalOnly;
 
     public bool IsOnline => online;
+
+    /// <summary>
+    /// True after signing in to an existing team book while this device still has its own unsynced changes:
+    /// uploads wait until the person decides whether those changes belong in the team book.
+    /// </summary>
+    public bool HoldingUploads { get; private set; }
 
     public async Task StartAsync()
     {
@@ -70,9 +72,53 @@ public sealed class SyncService : IDisposable
         return isOnline ? SyncNowAsync() : Task.CompletedTask;
     }
 
+    /// <summary>Creates the team book on the server with this device's owner; everything on this device is uploaded.</summary>
+    public async Task SetupAsync(string name, string password)
+    {
+        string memberId = book.Settings.MemberId.Length > 0 ? book.Settings.MemberId : BookService.NewId();
+        ApiSession session = await api.SetupAsync(name, password, memberId);
+        await StartSessionAsync(session, holdLocalChanges: false);
+    }
+
+    /// <summary>Signs in to the team book. Local changes made before signing in wait for a decision.</summary>
+    public async Task SignInAsync(string name, string password)
+    {
+        ApiSession session = await api.LoginAsync(name, password);
+        await StartSessionAsync(session, holdLocalChanges: book.PendingBookChanges > 0);
+    }
+
+    public async Task SignOutAsync()
+    {
+        try
+        {
+            await api.LogoutAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is ApiException)
+        {
+            logger.LogInformation(ex, "Sign-out request failed; signing out on this device anyway.");
+        }
+
+        book.Settings.Token = string.Empty;
+        HoldingUploads = false;
+        await book.SaveSettingsAsync();
+        UpdateIdleState();
+    }
+
+    /// <summary>Answers the held-uploads question: upload this device's changes to the team book, or throw them away.</summary>
+    public async Task ResolveHeldAsync(bool upload)
+    {
+        if (!upload)
+        {
+            await book.DropUnsyncedAsync(book.UnsyncedEvents().Select(e => e.Id).ToList());
+        }
+
+        HoldingUploads = false;
+        await SyncNowAsync();
+    }
+
     public async Task SyncNowAsync()
     {
-        if (!book.Settings.SyncConfigured || !online)
+        if (!book.Settings.SignedIn || !online)
         {
             UpdateIdleState();
             book.NotifyChanged();
@@ -89,13 +135,25 @@ public sealed class SyncService : IDisposable
         {
             State = SyncState.Syncing;
             book.NotifyChanged();
-            await PushAsync();
+            if (!HoldingUploads)
+            {
+                await PushAsync();
+            }
+
             await PullAsync();
             book.Settings.LastSyncUtc = DateTime.UtcNow;
             await book.SaveSettingsAsync();
             State = SyncState.Synced;
         }
-        catch (Exception ex) when (ex is HttpRequestException || ex is JsonException || ex is TaskCanceledException || ex is InvalidOperationException)
+        catch (ApiException ex) when (ex.Status == 401)
+        {
+            // Signed out on the server (password reset or removed from the team).
+            book.Settings.Token = string.Empty;
+            await book.SaveSettingsAsync();
+            State = SyncState.LocalOnly;
+            toasts.Show(book.T("signedOutNotice"));
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is JsonException || ex is TaskCanceledException || ex is ApiException || ex is InvalidOperationException)
         {
             logger.LogWarning(ex, "Sync failed.");
             State = online ? SyncState.Error : SyncState.Offline;
@@ -113,33 +171,22 @@ public sealed class SyncService : IDisposable
         }
     }
 
-    /// <summary>Saves new server settings and starts a fresh download of the book.</summary>
-    public async Task ConfigureAsync(string url, string key, string bookCode)
-    {
-        book.Settings.SyncUrl = url.Trim().TrimEnd('/');
-        book.Settings.SyncKey = key.Trim();
-        book.Settings.BookCode = bookCode.Trim();
-        book.Settings.PulledSeq = 0;
-        await book.SaveSettingsAsync();
-        await SyncNowAsync();
-    }
-
-    public async Task DisconnectAsync()
-    {
-        book.Settings.SyncUrl = string.Empty;
-        book.Settings.SyncKey = string.Empty;
-        book.Settings.BookCode = string.Empty;
-        book.Settings.PulledSeq = 0;
-        await book.SaveSettingsAsync();
-        UpdateIdleState();
-    }
-
     public void Dispose()
     {
         book.LocalChange -= OnLocalChange;
         debounce?.Cancel();
         timer?.Dispose();
         selfRef?.Dispose();
+    }
+
+    private async Task StartSessionAsync(ApiSession session, bool holdLocalChanges)
+    {
+        book.Settings.Token = session.Token;
+        book.Settings.MemberId = session.Member.Id;
+        book.Settings.PulledSeq = 0;
+        HoldingUploads = holdLocalChanges;
+        await book.SaveSettingsAsync();
+        await SyncNowAsync();
     }
 
     private void OnLocalChange()
@@ -169,7 +216,7 @@ public sealed class SyncService : IDisposable
 
     private void UpdateIdleState()
     {
-        if (!book.Settings.SyncConfigured)
+        if (!book.Settings.SignedIn)
         {
             State = SyncState.LocalOnly;
         }
@@ -186,89 +233,41 @@ public sealed class SyncService : IDisposable
     private async Task PushAsync()
     {
         IReadOnlyList<BookEvent> pending = book.UnsyncedEvents();
+        int refused = 0;
         for (int start = 0; start < pending.Count; start += PageSize)
         {
             List<BookEvent> batch = pending.Skip(start).Take(PageSize).ToList();
-            JsonArray rows = new JsonArray();
-            foreach (BookEvent bookEvent in batch)
-            {
-                rows.Add(new JsonObject
-                {
-                    ["id"] = bookEvent.Id,
-                    ["book_code"] = book.Settings.BookCode,
-                    ["at"] = bookEvent.AtUtc.ToString("o", CultureInfo.InvariantCulture),
-                    ["device_id"] = bookEvent.DeviceId,
-                    ["payload"] = JsonNode.Parse(BookJsonContext.Serialize(bookEvent))
-                });
-            }
+            PushResult result = await api.PushAsync(batch);
+            await book.MarkSyncedAsync(result.Accepted);
 
-            using HttpRequestMessage request = NewRequest(HttpMethod.Post, "/rest/v1/kf_events?on_conflict=id");
-            request.Headers.Add("Prefer", "resolution=ignore-duplicates,return=minimal");
-            request.Content = new StringContent(rows.ToJsonString(), Encoding.UTF8, "application/json");
-            using HttpResponseMessage response = await http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            await book.MarkSyncedAsync(batch.Select(e => e.Id).ToList());
+            // The server refuses changes this member's role doesn't allow, and team changes made on the device
+            // (the team lives on the server). Those can never sync, so they are removed from this device.
+            List<string> refusedIds = result.Rejected.Select(r => r.Id).ToList();
+            await book.DropUnsyncedAsync(refusedIds);
+            refused += result.Rejected.Count(r => r.Reason != "members-managed-by-server");
+        }
+
+        if (refused > 0)
+        {
+            toasts.Show(book.T("refusedChanges").Replace("{0}", refused.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
     }
 
     private async Task PullAsync()
     {
-        long after = Math.Max(0, book.Settings.PulledSeq - PullOverlap);
         while (true)
         {
-            string path = "/rest/v1/kf_events?select=seq,payload"
-                + "&book_code=eq." + Uri.EscapeDataString(book.Settings.BookCode)
-                + "&seq=gt." + after.ToString(CultureInfo.InvariantCulture)
-                + "&order=seq.asc&limit=" + PageSize.ToString(CultureInfo.InvariantCulture);
-
-            using HttpRequestMessage request = NewRequest(HttpMethod.Get, path);
-            using HttpResponseMessage response = await http.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            string body = await response.Content.ReadAsStringAsync();
-
-            List<BookEvent> incoming = new List<BookEvent>();
-            int count = 0;
-            using (JsonDocument doc = JsonDocument.Parse(body))
+            List<(long Seq, BookEvent? Event)> rows = await api.PullAsync(book.Settings.PulledSeq, PageSize);
+            await book.MergeRemoteAsync(rows.Where(r => r.Event != null).Select(r => r.Event!));
+            if (rows.Count > 0)
             {
-                foreach (JsonElement row in doc.RootElement.EnumerateArray())
-                {
-                    count++;
-                    after = Math.Max(after, row.GetProperty("seq").GetInt64());
-                    BookEvent? bookEvent = ReadPayload(row.GetProperty("payload"));
-                    if (bookEvent != null)
-                    {
-                        incoming.Add(bookEvent);
-                    }
-                }
+                book.Settings.PulledSeq = rows[rows.Count - 1].Seq;
             }
 
-            await book.MergeRemoteAsync(incoming);
-            book.Settings.PulledSeq = Math.Max(book.Settings.PulledSeq, after);
-            if (count < PageSize)
+            if (rows.Count < PageSize)
             {
                 return;
             }
         }
-    }
-
-    private BookEvent? ReadPayload(JsonElement payload)
-    {
-        try
-        {
-            return BookJsonContext.Deserialize(payload.GetRawText());
-        }
-        catch (Exception ex) when (ex is JsonException || ex is NotSupportedException)
-        {
-            logger.LogWarning(ex, "Skipped an unreadable event from the server.");
-            return null;
-        }
-    }
-
-    private HttpRequestMessage NewRequest(HttpMethod method, string path)
-    {
-        HttpRequestMessage request = new HttpRequestMessage(method, book.Settings.SyncUrl + path);
-        request.Headers.Add("apikey", book.Settings.SyncKey);
-        request.Headers.Add("Authorization", "Bearer " + book.Settings.SyncKey);
-        return request;
     }
 }

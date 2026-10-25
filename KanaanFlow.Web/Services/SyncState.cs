@@ -2,7 +2,7 @@ namespace KanaanFlow.Web.Services;
 
 public enum SyncState
 {
-    /// <summary>No sync server set up: the book lives on this device only.</summary>
+    /// <summary>Not signed in to a sync server: the book lives on this device only.</summary>
     LocalOnly,
 
     Offline,

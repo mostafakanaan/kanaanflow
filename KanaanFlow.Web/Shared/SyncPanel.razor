@@ -1,0 +1,225 @@
+@inherits KfComponent
+@inject SyncService Sync
+@inject ApiClient Api
+
+@* Sync status and the sign-in to the team's sync server (served from the same address as the app). *@
+<section class="card card-pad" id="sync">
+    <div style="display:flex;align-items:center;gap:10px">
+        <span class="dot @DotClass" style="width:14px;height:14px;border-radius:7px" aria-hidden="true"></span>
+        <h2 class="h3">@T("sync")</h2>
+    </div>
+    <p style="font-size:16px;line-height:1.55">@SyncText</p>
+
+    @if (Books.Settings.SignedIn)
+    {
+        <p class="muted small">
+            @T("signedInAs") @(Books.Me?.Name ?? string.Empty)
+            @if (Books.Settings.LastSyncUtc is DateTime last)
+            {
+                <span> · @T("lastSync"): @Books.DayLabel(DateOnly.FromDateTime(last.ToLocalTime())) <span class="ltr">@last.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)</span></span>
+            }
+        </p>
+
+        @if (Sync.HoldingUploads)
+        {
+            <div class="add-panel" role="alert">
+                <p style="font-size:16px;line-height:1.5">@T("holdQuestion").Replace("{0}", Books.PendingBookChanges.ToString(System.Globalization.CultureInfo.InvariantCulture))</p>
+                <div class="grid-2">
+                    <button type="button" class="btn btn-ghost" @onclick="() => ResolveAsync(false)">@T("holdDiscard")</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => ResolveAsync(true)">@T("holdUpload")</button>
+                </div>
+            </div>
+        }
+
+        <div class="grid-2">
+            <button type="button" class="btn btn-primary" disabled="@(Sync.State == SyncState.Syncing)" @onclick="Sync.SyncNowAsync">@T("syncNow")</button>
+            <button type="button" class="btn btn-ghost" disabled="@busy" @onclick="SignOutAsync">@T("signOut")</button>
+        </div>
+
+        <button type="button" class="link-btn" style="align-self:flex-start" aria-expanded="@(changingPassword ? "true" : "false")" @onclick="() => changingPassword = !changingPassword">@T("changePassword")</button>
+        @if (changingPassword)
+        {
+            <label class="field">@T("currentPassword")
+                <input class="input" type="password" @bind="currentPassword" autocomplete="current-password" />
+            </label>
+            <label class="field">@T("newPassword")
+                <input class="input" type="password" @bind="newPassword" autocomplete="new-password" />
+            </label>
+            <button type="button" class="btn btn-primary" disabled="@busy" @onclick="ChangePasswordAsync">@T("save")</button>
+        }
+    }
+    else if (!checkedServer)
+    {
+        <p class="muted small">…</p>
+    }
+    else if (serverReady == null)
+    {
+        <p class="notice">@T("noServer")</p>
+    }
+    else if (serverReady == false)
+    {
+        @if (Books.CanManage)
+        {
+            <p class="muted" style="font-size:15px;line-height:1.5">@T("setupIntro")</p>
+            <label class="field">@T("yourName")
+                <input class="input" type="text" @bind="name" autocomplete="username" />
+            </label>
+            <label class="field">@T("password")
+                <input class="input" type="password" @bind="password" autocomplete="new-password" />
+            </label>
+            <label class="field">@T("repeatPassword")
+                <input class="input" type="password" @bind="repeat" autocomplete="new-password" />
+            </label>
+            <button type="button" class="btn btn-primary" disabled="@busy" @onclick="SetupAsync">@T("createTeamBook")</button>
+        }
+        else
+        {
+            <p class="notice">@T("noBookYet")</p>
+        }
+    }
+    else
+    {
+        <p class="muted" style="font-size:15px">@T("signInIntro")</p>
+        <label class="field">@T("yourName")
+            <input class="input" type="text" @bind="name" autocomplete="username" />
+        </label>
+        <label class="field">@T("password")
+            <input class="input" type="password" @bind="password" autocomplete="current-password" />
+        </label>
+        <button type="button" class="btn btn-primary" disabled="@busy" @onclick="SignInAsync">@T("signIn")</button>
+    }
+
+    @if (error.Length > 0)
+    {
+        <p class="err-text" style="text-align:start" role="alert">@error</p>
+    }
+</section>
+
+@code {
+    private bool checkedServer;
+    private bool? serverReady;
+    private bool checkedSignedOut;
+    private bool busy;
+    private bool changingPassword;
+    private string name = string.Empty;
+    private string password = string.Empty;
+    private string repeat = string.Empty;
+    private string currentPassword = string.Empty;
+    private string newPassword = string.Empty;
+    private string error = string.Empty;
+
+    private string DotClass => Sync.State switch
+    {
+        SyncState.Offline => "warn",
+        SyncState.Error => "warn",
+        SyncState.LocalOnly => "local",
+        _ => string.Empty
+    };
+
+    private string SyncText => Sync.State switch
+    {
+        SyncState.Offline => T("syncOff") + (Books.PendingCount > 0 ? " (" + Books.PendingCount + " " + T("waiting") + ")" : string.Empty),
+        SyncState.Error => T("syncErr"),
+        SyncState.LocalOnly => T("syncLocal"),
+        _ => T("syncOk")
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        name = Books.Me?.Name ?? string.Empty;
+        await CheckServerAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Signed out while this page is open (by the button or by the server): show the right form.
+        if (!Books.Settings.SignedIn && !checkedSignedOut)
+        {
+            await CheckServerAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckServerAsync()
+    {
+        if (Books.Settings.SignedIn)
+        {
+            checkedSignedOut = false;
+        }
+        else
+        {
+            serverReady = await Api.IsReadyAsync();
+            checkedSignedOut = true;
+        }
+
+        checkedServer = true;
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        busy = true;
+        error = string.Empty;
+        try
+        {
+            await action();
+        }
+        catch (ApiException ex)
+        {
+            error = ErrorText(ex.Code);
+        }
+        catch (HttpRequestException)
+        {
+            error = T("noConnection");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private Task SetupAsync() => RunAsync(async () =>
+    {
+        if (password != repeat)
+        {
+            error = T("passwordsDiffer");
+            return;
+        }
+
+        await Sync.SetupAsync(name.Trim(), password);
+        checkedSignedOut = false;
+        password = repeat = string.Empty;
+        Toasts.Show(T("teamBookCreated"));
+    });
+
+    private Task SignInAsync() => RunAsync(async () =>
+    {
+        await Sync.SignInAsync(name.Trim(), password);
+        checkedSignedOut = false;
+        password = string.Empty;
+        Toasts.Show(T("signedIn"));
+    });
+
+    private Task SignOutAsync() => RunAsync(async () =>
+    {
+        await Sync.SignOutAsync();
+        await CheckServerAsync();
+    });
+
+    private Task ResolveAsync(bool upload) => RunAsync(() => Sync.ResolveHeldAsync(upload));
+
+    private Task ChangePasswordAsync() => RunAsync(async () =>
+    {
+        await Api.ChangePasswordAsync(currentPassword, newPassword);
+        currentPassword = newPassword = string.Empty;
+        changingPassword = false;
+        Toasts.Show(T("saved"));
+    });
+
+    private string ErrorText(string code)
+    {
+        string key = "err-" + code;
+        string text = T(key);
+        return text == key ? T("err-server-error") : text;
+    }
+}

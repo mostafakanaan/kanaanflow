@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KanaanFlow.Core\KanaanFlow.Core.csproj" />
+    <ProjectReference Include="..\KanaanFlow.Sync\KanaanFlow.Sync.csproj" />
   </ItemGroup>
 
 </Project>
