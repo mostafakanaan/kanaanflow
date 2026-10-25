@@ -101,7 +101,7 @@ between UI, domain logic, persistence, and synchronization.
 
 - KanaanFlow.App
 
-    - depends on Core, Data, Sync
+    - depends on Core, Data
 
 - KanaanFlow.Core
 
@@ -117,7 +117,7 @@ between UI, domain logic, persistence, and synchronization.
 
 ###
 
-- `App` depends on all other layers
+- `App` and `Web` depend on Core; `Sync` is a separate server that also depends only on Core
 - `Core` contains no infrastructure dependencies
 - `Data` and `Sync` depend only on `Core`
 - No circular dependencies
