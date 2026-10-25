@@ -1,26 +1,36 @@
-@* Small flags for the currency buttons, drawn inline so they work offline and on Windows (which has no flag emoji). *@
+@* Small flags for the currency buttons and the language picker, drawn inline so they work offline and on Windows (which has no flag emoji). *@
 <svg class="flag @Class" width="@(Size * 3 / 2)" height="@Size" viewBox="0 0 30 20" aria-hidden="true">
-    @switch (Currency)
+    @switch (Country ?? Currency.ToString())
     {
-        case Currency.SYP:
+        case "SYP":
             <rect width="30" height="20" fill="#000"/><rect width="30" height="13.33" fill="#fff"/><rect width="30" height="6.67" fill="#007A3D"/><polygon points="9.00,7.40 9.58,9.20 11.47,9.20 9.94,10.31 10.53,12.10 9.00,10.99 7.47,12.10 8.06,10.31 6.53,9.20 8.42,9.20" fill="#CE1126"/><polygon points="15.00,7.40 15.58,9.20 17.47,9.20 15.94,10.31 16.53,12.10 15.00,10.99 13.47,12.10 14.06,10.31 12.53,9.20 14.42,9.20" fill="#CE1126"/><polygon points="21.00,7.40 21.58,9.20 23.47,9.20 21.94,10.31 22.53,12.10 21.00,10.99 19.47,12.10 20.06,10.31 18.53,9.20 20.42,9.20" fill="#CE1126"/>
             break;
-        case Currency.TRY:
+        case "TRY":
             <rect width="30" height="20" fill="#E30A17"/><circle cx="11.25" cy="10" r="5" fill="#fff"/><circle cx="12.5" cy="10" r="4" fill="#E30A17"/><polygon points="14.60,10.00 16.33,9.44 16.33,7.62 17.40,9.09 19.12,8.53 18.05,10.00 19.12,11.47 17.40,10.91 16.33,12.38 16.33,10.56" fill="#fff"/>
             break;
-        case Currency.USD:
+        case "USD":
+        case "US":
             <rect width="30" height="20" fill="#fff"/><rect y="0.00" width="30" height="1.54" fill="#B22234"/><rect y="3.08" width="30" height="1.54" fill="#B22234"/><rect y="6.15" width="30" height="1.54" fill="#B22234"/><rect y="9.23" width="30" height="1.54" fill="#B22234"/><rect y="12.31" width="30" height="1.54" fill="#B22234"/><rect y="15.38" width="30" height="1.54" fill="#B22234"/><rect y="18.46" width="30" height="1.54" fill="#B22234"/><rect width="12" height="10.77" fill="#3C3B6E"/><circle cx="1.20" cy="1.30" r="0.42" fill="#fff"/><circle cx="3.15" cy="1.30" r="0.42" fill="#fff"/><circle cx="5.10" cy="1.30" r="0.42" fill="#fff"/><circle cx="7.05" cy="1.30" r="0.42" fill="#fff"/><circle cx="9.00" cy="1.30" r="0.42" fill="#fff"/><circle cx="10.95" cy="1.30" r="0.42" fill="#fff"/><circle cx="2.18" cy="3.35" r="0.42" fill="#fff"/><circle cx="4.13" cy="3.35" r="0.42" fill="#fff"/><circle cx="6.08" cy="3.35" r="0.42" fill="#fff"/><circle cx="8.03" cy="3.35" r="0.42" fill="#fff"/><circle cx="9.98" cy="3.35" r="0.42" fill="#fff"/><circle cx="1.20" cy="5.40" r="0.42" fill="#fff"/><circle cx="3.15" cy="5.40" r="0.42" fill="#fff"/><circle cx="5.10" cy="5.40" r="0.42" fill="#fff"/><circle cx="7.05" cy="5.40" r="0.42" fill="#fff"/><circle cx="9.00" cy="5.40" r="0.42" fill="#fff"/><circle cx="10.95" cy="5.40" r="0.42" fill="#fff"/><circle cx="2.18" cy="7.45" r="0.42" fill="#fff"/><circle cx="4.13" cy="7.45" r="0.42" fill="#fff"/><circle cx="6.08" cy="7.45" r="0.42" fill="#fff"/><circle cx="8.03" cy="7.45" r="0.42" fill="#fff"/><circle cx="9.98" cy="7.45" r="0.42" fill="#fff"/><circle cx="1.20" cy="9.50" r="0.42" fill="#fff"/><circle cx="3.15" cy="9.50" r="0.42" fill="#fff"/><circle cx="5.10" cy="9.50" r="0.42" fill="#fff"/><circle cx="7.05" cy="9.50" r="0.42" fill="#fff"/><circle cx="9.00" cy="9.50" r="0.42" fill="#fff"/><circle cx="10.95" cy="9.50" r="0.42" fill="#fff"/>
             break;
-        case Currency.EUR:
+        case "EUR":
             <rect width="30" height="20" fill="#003399"/><polygon points="15.00,2.90 15.25,3.66 16.05,3.66 15.40,4.13 15.65,4.89 15.00,4.42 14.35,4.89 14.60,4.13 13.95,3.66 14.75,3.66" fill="#FFCC00"/><polygon points="18.00,3.70 18.25,4.46 19.05,4.46 18.40,4.93 18.65,5.69 18.00,5.22 17.35,5.69 17.60,4.93 16.95,4.46 17.75,4.46" fill="#FFCC00"/><polygon points="20.20,5.90 20.44,6.66 21.24,6.66 20.60,7.13 20.84,7.89 20.20,7.42 19.55,7.89 19.80,7.13 19.15,6.66 19.95,6.66" fill="#FFCC00"/><polygon points="21.00,8.90 21.25,9.66 22.05,9.66 21.40,10.13 21.65,10.89 21.00,10.42 20.35,10.89 20.60,10.13 19.95,9.66 20.75,9.66" fill="#FFCC00"/><polygon points="20.20,11.90 20.44,12.66 21.24,12.66 20.60,13.13 20.84,13.89 20.20,13.42 19.55,13.89 19.80,13.13 19.15,12.66 19.95,12.66" fill="#FFCC00"/><polygon points="18.00,14.10 18.25,14.86 19.05,14.86 18.40,15.33 18.65,16.09 18.00,15.62 17.35,16.09 17.60,15.33 16.95,14.86 17.75,14.86" fill="#FFCC00"/><polygon points="15.00,14.90 15.25,15.66 16.05,15.66 15.40,16.13 15.65,16.89 15.00,16.42 14.35,16.89 14.60,16.13 13.95,15.66 14.75,15.66" fill="#FFCC00"/><polygon points="12.00,14.10 12.25,14.86 13.05,14.86 12.40,15.33 12.65,16.09 12.00,15.62 11.35,16.09 11.60,15.33 10.95,14.86 11.75,14.86" fill="#FFCC00"/><polygon points="9.80,11.90 10.05,12.66 10.85,12.66 10.20,13.13 10.45,13.89 9.80,13.42 9.16,13.89 9.40,13.13 8.76,12.66 9.56,12.66" fill="#FFCC00"/><polygon points="9.00,8.90 9.25,9.66 10.05,9.66 9.40,10.13 9.65,10.89 9.00,10.42 8.35,10.89 8.60,10.13 7.95,9.66 8.75,9.66" fill="#FFCC00"/><polygon points="9.80,5.90 10.05,6.66 10.85,6.66 10.20,7.13 10.45,7.89 9.80,7.42 9.16,7.89 9.40,7.13 8.76,6.66 9.56,6.66" fill="#FFCC00"/><polygon points="12.00,3.70 12.25,4.46 13.05,4.46 12.40,4.93 12.65,5.69 12.00,5.22 11.35,5.69 11.60,4.93 10.95,4.46 11.75,4.46" fill="#FFCC00"/>
+            break;
+        case "SA":
+            <rect width="30" height="20" fill="#006C35"/>
+            <path d="M8 8.2c.6-1.2 1.2-1.2 1.6 0s1 1.2 1.6 0 1-1.2 1.6 0 1 1.2 1.6 0 1-1.2 1.6 0 1 1.2 1.6 0 1-1.2 1.6 0 1 1.2 1.6 0M9.5 6.2v2.4M13 5.8v2.6M17.5 5.8v2.6M20.5 6.2v2.4" fill="none" stroke="#fff" stroke-width="0.8" stroke-linecap="round"/>
+            <path d="M8.5 12.6h12.5l1.5-.6-1.5-.6H8.5zM10 11.2v2.8" fill="#fff" stroke="#fff" stroke-width="0.6" stroke-linejoin="round"/>
             break;
     }
     <rect width="30" height="20" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="0.6"/>
 </svg>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
     public Currency Currency { get; set; }
+
+    /// <summary>A country flag instead of a currency's: "SA" or "US" (the language picker).</summary>
+    [Parameter]
+    public string? Country { get; set; }
 
     /// <summary>Height in pixels; the flag is 3:2.</summary>
     [Parameter]

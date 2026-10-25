@@ -444,3 +444,24 @@ h1:focus { outline: none; }
 .member-actions { flex: 1 0 100%; display: flex; align-items: center; gap: 6px; padding-inline-start: 52px; }
 .member-actions .link-btn { padding: 0 4px; }
 .member-actions .kind { flex: 1 1 140px; min-width: 130px; height: 44px; border-radius: 10px; border: 2px solid var(--field); background: #fff; font-size: 15px; padding: 0 8px; }
+
+/* ---------- home ---------- */
+.cash-grid { margin-top: -6px; }
+.cash-card .name { display: flex; align-items: center; gap: 6px; }
+.count-title { display: flex; align-items: center; gap: 8px; }
+.count-pill { min-width: 28px; height: 26px; padding: 0 9px; border-radius: 13px; background: var(--navy); color: #fff; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.count-pill.soft { background: var(--soft); color: var(--navy); }
+.more-row {
+    width: 100%; min-height: 52px; border: 0; border-top: 1px solid var(--line-soft); background: #fff; color: var(--navy);
+    font: inherit; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+}
+.more-row:hover { background: var(--soft); }
+.chev-down { transform: rotate(90deg); }
+.chev-up { transform: rotate(-90deg); }
+
+/* ---------- welcome: language picker ---------- */
+.lang-pick { position: fixed; top: calc(14px + env(safe-area-inset-top)); inset-inline-end: 16px; z-index: 30; }
+.lang-btn { height: 44px; padding: 0 10px; border-radius: 12px; border: 2px solid var(--line); background: #fff; display: flex; align-items: center; gap: 6px; color: var(--navy); }
+.lang-menu { position: absolute; top: 50px; inset-inline-end: 0; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 6px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 8px 24px rgba(15, 27, 61, .15); }
+.lang-menu button { width: 64px; height: 44px; border: 2px solid transparent; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; }
+.lang-menu button[aria-checked="true"] { border-color: var(--navy); background: var(--soft); }

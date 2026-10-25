@@ -337,6 +337,8 @@ public static class Strings
         ["kind-openingBalance.set"] = "غيّر رصيد البداية",
         ["kind-member.saved"] = "عدّل مستخدماً",
         ["kind-member.removed"] = "أزال مستخدماً",
+        ["showMore"] = "عرض المزيد",
+        ["showLess"] = "عرض أقل",
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -648,5 +650,7 @@ public static class Strings
         ["kind-openingBalance.set"] = "changed an opening balance",
         ["kind-member.saved"] = "changed a user",
         ["kind-member.removed"] = "removed a user",
+        ["showMore"] = "Show more",
+        ["showLess"] = "Show less",
     };
 }

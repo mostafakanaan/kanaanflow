@@ -6,15 +6,27 @@
 @inject LocalAuth Local
 
 <PageTitle>KanaanFlow</PageTitle>
+<div class="lang-pick">
+    <button type="button" class="lang-btn" aria-label="@T("language")" aria-haspopup="menu" aria-expanded="@(langOpen ? "true" : "false")" @onclick="() => langOpen = !langOpen">
+        <Flag Country="@FlagFor(Lang)" Size="20" />
+        <Icon Name="chevron" Size="16" Class="chev-down" />
+    </button>
+    @if (langOpen)
+    {
+        <div class="lang-menu" role="menu">
+            @foreach ((string Code, string Name) l in Languages)
+            {
+                string code = l.Code;
+                <button type="button" role="menuitemradio" aria-label="@l.Name" aria-checked="@(Lang == code ? "true" : "false")" @onclick="() => SetLanguage(code)"><Flag Country="@FlagFor(code)" Size="22" /></button>
+            }
+        </div>
+    }
+</div>
+
 <div class="welcome">
     <BrandMark Class="logo" />
     <h1>@T("welcomeTitle")</h1>
     <p>@T("welcomeText")</p>
-
-    <div class="grid-2" role="group" aria-label="@T("language")">
-        <button type="button" class="sel tile" aria-pressed="@(Lang == "ar" ? "true" : "false")" @onclick='() => SetLanguage("ar")'>العربية</button>
-        <button type="button" class="sel tile" aria-pressed="@(Lang == "en" ? "true" : "false")" @onclick='() => SetLanguage("en")'>English</button>
-    </div>
 
     <div class="grid-2" role="group">
         <button type="button" class="sel tile" aria-pressed="@(!creating ? "true" : "false")" @onclick="() => Switch(false)"><Icon Name="user" Size="20" />&nbsp;@T("signIn")</button>
@@ -62,6 +74,11 @@
     private bool checkedServer;
     private bool? serverReady;
     private bool busy;
+    private bool langOpen;
+
+    private static readonly (string Code, string Name)[] Languages = { ("ar", "العربية"), ("en", "English") };
+
+    private static string FlagFor(string language) => language == "en" ? "US" : "SA";
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,6 +103,7 @@
 
     private async Task SetLanguage(string language)
     {
+        langOpen = false;
         Books.Settings.Language = language;
         await Books.SaveSettingsAsync();
     }
