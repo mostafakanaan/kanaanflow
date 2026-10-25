@@ -193,7 +193,7 @@ else
         }
 
         Export.AddTotals(doc, totals);
-        doc.EntriesHeader.AddRange(new[] { T("date"), T("typeCol"), T("category"), T("noteCol"), T("amount") });
+        doc.EntriesHeader.AddRange(new[] { T("date"), T("typeCol"), T("category"), T("noteCol"), T("amount"), T("recordedBy"), T("approval") });
         foreach (Entry entry in history)
         {
             doc.EntriesRows.Add(new List<string>
@@ -202,7 +202,9 @@ else
                 entry.Type == EntryType.In ? T("received") : T("paid"),
                 Books.EntryCategoryName(entry.CategoryId),
                 entry.Note,
-                Fmt.Signed(entry.Amount, entry.Type == EntryType.In) + " " + Sym(entry.Currency)
+                Fmt.Signed(entry.Amount, entry.Type == EntryType.In) + " " + Sym(entry.Currency),
+                Books.MemberName(entry.CreatedBy),
+                Export.ApprovalText(entry)
             });
         }
 

@@ -72,44 +72,53 @@ public sealed class SyncService : IDisposable
         return isOnline ? SyncNowAsync() : Task.CompletedTask;
     }
 
-    /// <summary>Creates the team book on the server with this device's owner; everything on this device is uploaded.</summary>
-    public async Task SetupAsync(string name, string password)
+    /// <summary>Creates a new user on the team server (needs the master password). New users are Admins.</summary>
+    public async Task RegisterAsync(string name, string password, string masterPassword)
     {
-        string memberId = book.Settings.MemberId.Length > 0 ? book.Settings.MemberId : BookService.NewId();
-        ApiSession session = await api.SetupAsync(name, password, memberId);
-        await StartSessionAsync(session, holdLocalChanges: false);
+        // Keep the id of whoever used this device before, so their entries stay theirs.
+        string memberId = book.Settings.LocalAccounts.FirstOrDefault()?.MemberId ?? BookService.NewId();
+        ApiSession session = await api.RegisterAsync(name, password, masterPassword, memberId);
+        await StartSessionAsync(session);
     }
 
-    /// <summary>Signs in to the team book. Local changes made before signing in wait for a decision.</summary>
+    /// <summary>Signs in to the team book.</summary>
     public async Task SignInAsync(string name, string password)
     {
         ApiSession session = await api.LoginAsync(name, password);
-        await StartSessionAsync(session, holdLocalChanges: book.PendingBookChanges > 0);
+        await StartSessionAsync(session);
     }
 
-    public async Task SignOutAsync()
+    /// <summary>Logs out on this device (and ends the server session). Unsynced changes stay until their author logs in again.</summary>
+    public async Task LogOutAsync()
     {
-        try
+        if (book.Settings.SignedIn)
         {
-            await api.LogoutAsync();
-        }
-        catch (Exception ex) when (ex is HttpRequestException || ex is ApiException)
-        {
-            logger.LogInformation(ex, "Sign-out request failed; signing out on this device anyway.");
+            try
+            {
+                await api.LogoutAsync();
+            }
+            catch (Exception ex) when (ex is HttpRequestException || ex is ApiException || ex is TaskCanceledException)
+            {
+                logger.LogInformation(ex, "Sign-out request failed; logging out on this device anyway.");
+            }
         }
 
-        book.Settings.Token = string.Empty;
         HoldingUploads = false;
-        await book.SaveSettingsAsync();
+        await book.LogOutAsync();
         UpdateIdleState();
     }
 
-    /// <summary>Answers the held-uploads question: upload this device's changes to the team book, or throw them away.</summary>
+    /// <summary>Answers the held-uploads question: upload the changes as the logged-in member, or throw them away.</summary>
     public async Task ResolveHeldAsync(bool upload)
     {
-        if (!upload)
+        List<string> ids = book.ForeignUnsyncedEvents().Select(e => e.Id).ToList();
+        if (upload)
         {
-            await book.DropUnsyncedAsync(book.UnsyncedEvents().Select(e => e.Id).ToList());
+            await book.ClaimUnsyncedAsync(ids);
+        }
+        else
+        {
+            await book.DropUnsyncedAsync(ids);
         }
 
         HoldingUploads = false;
@@ -135,21 +144,18 @@ public sealed class SyncService : IDisposable
         {
             State = SyncState.Syncing;
             book.NotifyChanged();
-            if (!HoldingUploads)
-            {
-                await PushAsync();
-            }
-
+            await PushAsync();
             await PullAsync();
+            HoldingUploads = book.ForeignUnsyncedEvents().Count > 0;
             book.Settings.LastSyncUtc = DateTime.UtcNow;
             await book.SaveSettingsAsync();
             State = SyncState.Synced;
         }
         catch (ApiException ex) when (ex.Status == 401)
         {
-            // Signed out on the server (password reset or removed from the team).
-            book.Settings.Token = string.Empty;
-            await book.SaveSettingsAsync();
+            // Signed out on the server (password reset, signed out by an Admin, or removed from the team): log in again.
+            HoldingUploads = false;
+            await book.LogOutAsync();
             State = SyncState.LocalOnly;
             toasts.Show(book.T("signedOutNotice"));
         }
@@ -179,14 +185,20 @@ public sealed class SyncService : IDisposable
         selfRef?.Dispose();
     }
 
-    private async Task StartSessionAsync(ApiSession session, bool holdLocalChanges)
+    private async Task StartSessionAsync(ApiSession session)
     {
         book.Settings.Token = session.Token;
-        book.Settings.MemberId = session.Member.Id;
         book.Settings.PulledSeq = 0;
-        HoldingUploads = holdLocalChanges;
-        await book.SaveSettingsAsync();
-        await SyncNowAsync();
+        book.Settings.LocalAccounts.Clear();
+        await book.LogInAsync(session.Member.Id, session.Member.Role, localOnly: false);
+
+        // A device-only team never uploads (the team lives on the server), so it shouldn't count as waiting.
+        await book.DropUnsyncedAsync(book.UnsyncedEvents().Where(e => e.Change is MemberSaved or MemberRemoved).Select(e => e.Id).ToList());
+
+        // Changes on this device by someone the team doesn't know wait for a decision (see ResolveHeldAsync).
+        HoldingUploads = book.ForeignUnsyncedEvents().Count > 0;
+        UpdateIdleState();
+        _ = SyncNowAsync();
     }
 
     private void OnLocalChange()
@@ -232,7 +244,8 @@ public sealed class SyncService : IDisposable
 
     private async Task PushAsync()
     {
-        IReadOnlyList<BookEvent> pending = book.UnsyncedEvents();
+        // Only the logged-in member's own changes: the server ties every change to whoever uploads it.
+        IReadOnlyList<BookEvent> pending = book.MyUnsyncedEvents();
         int refused = 0;
         for (int start = 0; start < pending.Count; start += PageSize)
         {

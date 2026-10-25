@@ -1,0 +1,30 @@
+@inherits KfComponent
+
+@* A panel that slides up from the bottom (a dialog on wide screens). Tap outside or the close button to close it. *@
+@if (Open)
+{
+    <div class="sheet-back" @onclick="CloseAsync"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="@Title">
+        <div class="sheet-head">
+            <h2 class="h3">@Title</h2>
+            <button type="button" class="icon-btn" aria-label="@T("close")" @onclick="CloseAsync"><Icon Name="close" Size="22" /></button>
+        </div>
+        @ChildContent
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+}

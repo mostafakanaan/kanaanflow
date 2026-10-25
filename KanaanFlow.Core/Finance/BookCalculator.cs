@@ -124,6 +124,21 @@ public static class BookCalculator
                 }
             }
 
+            if (filter.CreatedBy != null && e.CreatedBy != filter.CreatedBy)
+            {
+                return false;
+            }
+
+            if (filter.Approval == ApprovalFilter.Pending && !e.IsPendingApproval)
+            {
+                return false;
+            }
+
+            if (filter.Approval == ApprovalFilter.Approved && e.ApprovedBy == null)
+            {
+                return false;
+            }
+
             return filter.ContactId == null || e.ContactId == filter.ContactId;
         }).ToList();
 

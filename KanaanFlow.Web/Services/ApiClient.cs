@@ -1,5 +1,6 @@
 namespace KanaanFlow.Web.Services;
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
@@ -15,6 +16,12 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 public sealed record ApiMember(string Id, string Name, TeamRole Role, bool Active);
 
 public sealed record ApiSession(string Token, ApiMember Member);
+
+public sealed record ApiOverview(long Members, long Events, long Sessions, DateTime? LastChangeUtc);
+
+public sealed record ApiDeviceSession(string MemberId, string Name, DateTime CreatedUtc, DateTime LastSeenUtc);
+
+public sealed record ApiActivity(long Seq, DateTime AtUtc, string Kind, string DeviceId, string Name);
 
 public sealed record PushResult(List<string> Accepted, List<(string Id, string Reason)> Rejected);
 
@@ -56,9 +63,11 @@ public sealed class ApiClient
         }
     }
 
-    public async Task<ApiSession> SetupAsync(string name, string password, string memberId)
+    /// <summary>Creates a new Admin on the server; needs the master password.</summary>
+    public async Task<ApiSession> RegisterAsync(string name, string password, string masterPassword, string memberId)
     {
-        JsonNode? body = await SendAsync(HttpMethod.Post, "setup", new JsonObject { ["name"] = name, ["password"] = password, ["memberId"] = memberId }, authorized: false);
+        JsonObject request = new JsonObject { ["name"] = name, ["password"] = password, ["masterPassword"] = masterPassword, ["memberId"] = memberId };
+        JsonNode? body = await SendAsync(HttpMethod.Post, "register", request, authorized: false);
         return ReadSession(body);
     }
 
@@ -110,6 +119,51 @@ public sealed class ApiClient
         }
 
         return SendAsync(HttpMethod.Patch, "members/" + id, request, authorized: true);
+    }
+
+    public async Task<ApiOverview> AdminOverviewAsync()
+    {
+        JsonNode? body = await SendAsync(HttpMethod.Get, "admin/overview", null, authorized: true);
+        return new ApiOverview(
+            body!["members"]!.GetValue<long>(),
+            body["events"]!.GetValue<long>(),
+            body["sessions"]!.GetValue<long>(),
+            ReadTime(body["lastChangeUtc"]));
+    }
+
+    public async Task<List<ApiDeviceSession>> AdminSessionsAsync()
+    {
+        JsonNode? body = await SendAsync(HttpMethod.Get, "admin/sessions", null, authorized: true);
+        List<ApiDeviceSession> sessions = new List<ApiDeviceSession>();
+        foreach (JsonNode? node in body?.AsArray() ?? new JsonArray())
+        {
+            sessions.Add(new ApiDeviceSession(
+                node!["memberId"]!.GetValue<string>(),
+                node["name"]!.GetValue<string>(),
+                ReadTime(node["createdUtc"]) ?? DateTime.MinValue,
+                ReadTime(node["lastSeenUtc"]) ?? DateTime.MinValue));
+        }
+
+        return sessions;
+    }
+
+    public Task AdminSignOutAsync(string memberId) => SendAsync(HttpMethod.Post, "admin/members/" + memberId + "/signout", null, authorized: true);
+
+    public async Task<List<ApiActivity>> AdminActivityAsync(int limit)
+    {
+        JsonNode? body = await SendAsync(HttpMethod.Get, "admin/activity?limit=" + limit.ToString(CultureInfo.InvariantCulture), null, authorized: true);
+        List<ApiActivity> rows = new List<ApiActivity>();
+        foreach (JsonNode? node in body?.AsArray() ?? new JsonArray())
+        {
+            rows.Add(new ApiActivity(
+                node!["seq"]!.GetValue<long>(),
+                ReadTime(node["atUtc"]) ?? DateTime.MinValue,
+                node["kind"]!.GetValue<string>(),
+                node["deviceId"]!.GetValue<string>(),
+                node["name"]!.GetValue<string>()));
+        }
+
+        return rows;
     }
 
     public async Task<PushResult> PushAsync(IReadOnlyList<BookEvent> events)
@@ -164,6 +218,14 @@ public sealed class ApiClient
         }
 
         return rows;
+    }
+
+    private static DateTime? ReadTime(JsonNode? node)
+    {
+        string? text = node?.GetValue<string>();
+        return text != null && DateTime.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime value)
+            ? value
+            : null;
     }
 
     private static ApiSession ReadSession(JsonNode? body)

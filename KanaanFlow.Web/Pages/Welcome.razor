@@ -3,6 +3,7 @@
 @inherits KfComponent
 @inject SyncService Sync
 @inject ApiClient Api
+@inject LocalAuth Local
 
 <PageTitle>KanaanFlow</PageTitle>
 <div class="welcome">
@@ -15,27 +16,32 @@
         <button type="button" class="sel tile" aria-pressed="@(Lang == "en" ? "true" : "false")" @onclick='() => SetLanguage("en")'>English</button>
     </div>
 
-    @if (teamBookExists)
+    <div class="grid-2" role="group">
+        <button type="button" class="sel tile" aria-pressed="@(!creating ? "true" : "false")" @onclick="() => Switch(false)"><Icon Name="user" Size="20" />&nbsp;@T("signIn")</button>
+        <button type="button" class="sel tile" aria-pressed="@(creating ? "true" : "false")" @onclick="() => Switch(true)"><Icon Name="plus" Size="20" />&nbsp;@T("createUser")</button>
+    </div>
+
+    @if (serverReady == null && checkedServer)
     {
-        <div class="grid-2" role="group">
-            <button type="button" class="sel tile" aria-pressed="@(joining ? "true" : "false")" @onclick="() => joining = true">@T("joinTeam")</button>
-            <button type="button" class="sel tile" aria-pressed="@(!joining ? "true" : "false")" @onclick="() => joining = false">@T("newBook")</button>
-        </div>
+        <p class="notice">@T("noServerLocal")</p>
     }
 
     <label class="field">@T("yourName")
         <input class="input" type="text" @bind="name" @bind:event="oninput" placeholder="@T("yourNamePh")" autocomplete="username" />
     </label>
+    <label class="field">@T("password")
+        <input class="input" type="password" @bind="password" autocomplete="@(creating ? "new-password" : "current-password")" />
+    </label>
 
-    @if (joining)
+    @if (creating)
     {
-        <label class="field">@T("password")
-            <input class="input" type="password" @bind="password" autocomplete="current-password" />
+        <label class="field">@T("repeatPassword")
+            <input class="input" type="password" @bind="repeat" autocomplete="new-password" />
         </label>
-    }
-    else if (!teamBookExists)
-    {
-        <p class="muted small">@T("joinHint")</p>
+        <label class="field">@T("masterPassword")
+            <input class="input" type="password" @bind="master" autocomplete="off" />
+        </label>
+        <p class="muted small">@T("createUserHint")</p>
     }
 
     @if (error.Length > 0)
@@ -43,29 +49,39 @@
         <p class="err-text" style="text-align:start" role="alert">@error</p>
     }
 
-    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@busy" @onclick="StartAsync">@(joining ? T("signIn") : T("start"))</button>
+    <button type="button" class="btn btn-primary btn-block" style="height:64px;font-size:22px;border-radius:18px" disabled="@(busy || !checkedServer)" @onclick="StartAsync">@(creating ? T("createUser") : T("signIn"))</button>
 </div>
 
 @code {
     private string name = string.Empty;
     private string password = string.Empty;
+    private string repeat = string.Empty;
+    private string master = string.Empty;
     private string error = string.Empty;
-    private bool joining;
-    private bool teamBookExists;
+    private bool creating;
+    private bool checkedServer;
+    private bool? serverReady;
     private bool busy;
 
     protected override async Task OnInitializedAsync()
     {
         base.OnInitialized();
-        if (Books.Settings.SetupDone)
+        if (Books.IsLoggedIn)
         {
             Nav.NavigateTo("", replace: true);
             return;
         }
 
-        // When this address has a team book, joining it is the likely choice.
-        teamBookExists = await Api.IsReadyAsync() == true;
-        joining = teamBookExists;
+        // A server without users yet, or a device with no users of its own: creating the first user is the likely choice.
+        serverReady = await Api.IsReadyAsync();
+        creating = serverReady == false || (serverReady == null && Books.Settings.LocalAccounts.Count == 0);
+        checkedServer = true;
+    }
+
+    private void Switch(bool create)
+    {
+        creating = create;
+        error = string.Empty;
     }
 
     private async Task SetLanguage(string language)
@@ -78,27 +94,45 @@
     {
         busy = true;
         error = string.Empty;
+        string trimmed = name.Trim();
         try
         {
-            if (joining)
+            if (creating && password != repeat)
             {
-                await Sync.SignInAsync(name.Trim(), password);
+                error = T("passwordsDiffer");
+                return;
+            }
+
+            string? failure = null;
+            if (serverReady != null)
+            {
+                if (creating)
+                {
+                    await Sync.RegisterAsync(trimmed, password, master);
+                }
+                else
+                {
+                    await Sync.SignInAsync(trimmed, password);
+                }
             }
             else
             {
-                TeamMember me = new TeamMember { Id = BookService.NewId(), Name = name.Trim(), Role = TeamRole.Owner };
-                Books.Settings.MemberId = me.Id;
-                await Books.RecordAsync(new MemberSaved { Member = me });
+                failure = creating ? await Local.RegisterAsync(trimmed, password, master) : await Local.SignInAsync(trimmed, password);
             }
 
-            Books.Settings.SetupDone = true;
-            await Books.SaveSettingsAsync();
+            if (failure != null)
+            {
+                error = ErrorText.For(Books, failure);
+                return;
+            }
+
+            password = repeat = master = string.Empty;
+            Toasts.Show(creating ? T("userCreated") : T("signedIn"));
             Nav.NavigateTo("", replace: true);
         }
         catch (ApiException ex)
         {
-            string key = "err-" + ex.Code;
-            error = T(key) == key ? T("err-server-error") : T(key);
+            error = ErrorText.For(Books, ex.Code);
         }
         catch (HttpRequestException)
         {

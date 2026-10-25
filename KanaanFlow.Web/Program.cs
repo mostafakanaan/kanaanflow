@@ -14,6 +14,7 @@ builder.Services.AddSingleton<BookService>();
 builder.Services.AddSingleton<ToastService>();
 builder.Services.AddSingleton<ApiClient>();
 builder.Services.AddSingleton<SyncService>();
+builder.Services.AddSingleton<LocalAuth>();
 builder.Services.AddSingleton<RateService>();
 builder.Services.AddSingleton<ExportService>();
 

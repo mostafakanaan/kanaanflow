@@ -1,0 +1,8 @@
+@inherits KfComponent
+
+<span class="role @RoleText.Css(Role)">@RoleText.Name(Books, Role)</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public TeamRole Role { get; set; }
+}

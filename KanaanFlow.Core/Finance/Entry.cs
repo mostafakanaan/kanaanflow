@@ -1,6 +1,7 @@
 namespace KanaanFlow.Core.Finance;
 
 using System;
+using System.Text.Json.Serialization;
 
 /// <summary>
 /// One money movement: received, paid, or an exchange between two currencies.
@@ -50,6 +51,25 @@ public sealed class Entry
 
     public DateTime CreatedUtc { get; set; }
 
+    /// <summary>Set by the book: the entry was recorded by an Owner, so it shows whether an Accountant approved it.</summary>
+    [JsonIgnore]
+    public bool NeedsApproval { get; set; }
+
+    /// <summary>Set by the book: who approved the entry, null while it waits.</summary>
+    [JsonIgnore]
+    public string? ApprovedBy { get; set; }
+
+    [JsonIgnore]
+    public DateTime? ApprovedUtc { get; set; }
+
+    /// <summary>Set by the book: the author was on the team when the entry was recorded.</summary>
+    [JsonIgnore]
+    public bool AuthorKnown { get; set; }
+
+    [JsonIgnore]
+    public bool IsPendingApproval => NeedsApproval && ApprovedBy == null;
+
+    [JsonIgnore]
     public bool IsLoanRepayment => LoanId != null && !IsLoanPrincipal;
 
     public Entry Clone() => (Entry)MemberwiseClone();

@@ -1,0 +1,82 @@
+@page "/more/entities"
+@inherits KfComponent
+
+<SettingsHeader Title="@T("tileEntities")" />
+
+<section class="card card-pad">
+    <h2 class="h3">@T("peopleCats")</h2>
+    @if (Books.CanManageBook)
+    {
+        <p class="muted" style="font-size:15px">@T("entitiesIntro")</p>
+        @foreach (PeopleCategory category in Book.PeopleCategories)
+        {
+            PeopleCategory c = category;
+            <div class="cat-edit">
+                <input class="input" value="@c.Name(Lang)" aria-label="@c.Name(Lang)" @onchange="e => RenameAsync(c, e.Value?.ToString())" />
+                <span class="muted small" style="white-space:nowrap">@Count(c.Id)</span>
+                @if (!c.IsLocked)
+                {
+                    <button type="button" class="icon-btn" aria-label="@T("delete") @c.Name(Lang)" @onclick="() => RemoveAsync(c)"><Icon Name="trash" Size="22" /></button>
+                }
+            </div>
+        }
+        <div style="display:flex;gap:8px">
+            <input class="input" style="height:52px;font-size:17px" type="text" @bind="newName" placeholder="@T("addCatPh")" aria-label="@T("addCatPh")" />
+            <button type="button" class="btn btn-primary" @onclick="AddAsync">@T("add")</button>
+        </div>
+    }
+    else
+    {
+        <div class="wrap">
+            @foreach (PeopleCategory category in Book.PeopleCategories)
+            {
+                <span class="tag" style="padding:8px 14px;border-radius:20px;font-size:16px">@category.Name(Lang) · @Count(category.Id)</span>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private string newName = string.Empty;
+
+    private int Count(string categoryId) => Book.Contacts.Count(c => c.CategoryId == categoryId);
+
+    private Task RenameAsync(PeopleCategory category, string? text)
+    {
+        string name = (text ?? string.Empty).Trim();
+        if (name.Length == 0 || name == category.Name(Lang))
+        {
+            return Task.CompletedTask;
+        }
+
+        PeopleCategory updated = new PeopleCategory
+        {
+            Id = category.Id,
+            NameAr = Lang == "ar" ? name : category.NameAr,
+            NameEn = Lang == "en" ? name : category.NameEn
+        };
+        return Books.RecordAsync(new PeopleCategorySaved { Category = updated });
+    }
+
+    private async Task RemoveAsync(PeopleCategory category)
+    {
+        await Books.RecordAsync(new PeopleCategoryRemoved { CategoryId = category.Id });
+        Toasts.Show(T("deleteDone") + " · " + category.Name(Lang));
+    }
+
+    private async Task AddAsync()
+    {
+        string name = newName.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+
+        await Books.RecordAsync(new PeopleCategorySaved
+        {
+            Category = new PeopleCategory { Id = BookService.NewId(), NameAr = name, NameEn = name }
+        });
+        newName = string.Empty;
+        Toasts.Show(T("saved") + " · " + name);
+    }
+}

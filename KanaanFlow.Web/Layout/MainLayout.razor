@@ -4,7 +4,8 @@
 @inject NavigationManager Nav
 
 <DocumentDir />
-@if (Books.Settings.SetupDone)
+@* Nothing of the app shows until someone is logged in. *@
+@if (Books.IsLoggedIn)
 {
     <div class="shell">
         <header class="app-header">
@@ -15,7 +16,10 @@
                     <span class="brand-tag">@Books.T("tagline")</span>
                 </span>
             </a>
-            <SyncChip />
+            <div class="top-actions">
+                <SyncButton />
+                <UserButton />
+            </div>
         </header>
 
         <main class="kf-main no-scrollbar">
@@ -70,13 +74,27 @@
     {
         Books.Changed += OnChanged;
         Nav.LocationChanged += OnLocationChanged;
-        if (!Books.Settings.SetupDone)
+        RequireLogIn();
+    }
+
+    /// <summary>Sends anyone who isn't logged in to the welcome screen, whatever address they opened.</summary>
+    private void RequireLogIn()
+    {
+        if (!Books.IsLoggedIn)
         {
             Nav.NavigateTo("welcome", replace: true);
         }
     }
 
-    private void OnChanged() => InvokeAsync(StateHasChanged);
+    private void OnChanged() => InvokeAsync(() =>
+    {
+        RequireLogIn();
+        StateHasChanged();
+    });
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
+    {
+        RequireLogIn();
+        StateHasChanged();
+    });
 }

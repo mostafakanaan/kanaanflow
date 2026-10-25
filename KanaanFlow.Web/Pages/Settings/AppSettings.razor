@@ -1,0 +1,75 @@
+@page "/more/app"
+@inherits KfComponent
+@inject IJSRuntime JS
+
+<SettingsHeader Title="@T("tileApp")" />
+
+<section class="card card-pad">
+    <h2 class="h3">@T("language")</h2>
+    <div class="grid-2" style="gap:8px">
+        <button type="button" class="sel tile" style="font-size:18px;font-weight:700" aria-pressed="@(Lang == "ar" ? "true" : "false")" @onclick='() => SetLanguageAsync("ar")'>العربية</button>
+        <button type="button" class="sel tile" style="font-size:18px;font-weight:700" aria-pressed="@(Lang == "en" ? "true" : "false")" @onclick='() => SetLanguageAsync("en")'>English</button>
+    </div>
+    <h2 class="h3" style="margin-top:6px">@T("textSize")</h2>
+    <div class="grid-3">
+        @foreach ((double Zoom, string Label, string Size) z in Sizes)
+        {
+            double zoom = z.Zoom;
+            <button type="button" class="sel tile" style="height:56px;font-weight:700;font-size:@z.Size" aria-pressed="@(Math.Abs(Books.Settings.Zoom - zoom) < 0.01 ? "true" : "false")" @onclick="() => SetZoomAsync(zoom)">@T(z.Label)</button>
+        }
+    </div>
+</section>
+
+@if (showInstall)
+{
+    <section class="card card-pad">
+        <h2 class="h3">@T("install")</h2>
+        <p class="muted" style="font-size:16px">@T("installSub")</p>
+        @if (canInstall)
+        {
+            <button type="button" class="btn btn-primary" @onclick="InstallAsync"><Icon Name="download" Size="22" />@T("install")</button>
+        }
+        else
+        {
+            <p class="notice">@T("installIos")</p>
+        }
+    </section>
+}
+
+@code {
+    private static readonly (double Zoom, string Label, string Size)[] Sizes =
+    {
+        (1.0, "sNormal", "16px"), (1.12, "sLarge", "19px"), (1.25, "sXL", "22px")
+    };
+
+    private bool showInstall;
+    private bool canInstall;
+
+    protected override async Task OnInitializedAsync()
+    {
+        base.OnInitialized();
+        bool standalone = await JS.InvokeAsync<bool>("kf.isStandalone");
+        canInstall = await JS.InvokeAsync<bool>("kf.canInstall");
+        bool ios = await JS.InvokeAsync<bool>("kf.isIos");
+        showInstall = !standalone && (canInstall || ios);
+    }
+
+    private async Task SetLanguageAsync(string language)
+    {
+        Books.Settings.Language = language;
+        await Books.SaveSettingsAsync();
+    }
+
+    private async Task SetZoomAsync(double zoom)
+    {
+        Books.Settings.Zoom = zoom;
+        await Books.SaveSettingsAsync();
+    }
+
+    private async Task InstallAsync()
+    {
+        await JS.InvokeAsync<bool>("kf.install");
+        canInstall = await JS.InvokeAsync<bool>("kf.canInstall");
+        showInstall = canInstall;
+    }
+}

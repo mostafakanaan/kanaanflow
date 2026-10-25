@@ -29,7 +29,7 @@
                     @foreach (Currency c in Book.Currencies)
                     {
                         Currency pick = c;
-                        <button type="button" class="sel cur-chip" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick">@Sym(c)<small>@Fmt.ShortName(c, Lang)</small></button>
+                        <button type="button" class="sel cur-chip" aria-label="@Fmt.LongName(c, Lang)" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick"><Flag Currency="c" Size="24" /><small>@Sym(c)</small></button>
                     }
                 </div>
                 <div class="keypad">

@@ -20,9 +20,15 @@ Arabic first (right-to-left), English one tap away.
 - **Exchange** between SYP, USD, EUR and TRY at a typed or fetched rate; each currency keeps its own balance.
 - **Reports** for a day or date range, filtered by people category, entry type or person; export PDF (print) or Excel.
 - **Offline first**: everything is stored on the device (IndexedDB) and works with no internet.
+- **Log in first**: nothing shows until someone logs in. New users need the master password and become Admins.
+  The top bar has a sync icon (its color is the status; tap it to sync) and a user button (password, admin panel, log out).
+- **Roles**, enforced by the server: Admin (everything, admin panel), Owner (everything but Admins), Accountant
+  (like an Owner, and approves Owners' entries), Employee (coming later) and Read-only.
+- **Who did it**: every entry shows who recorded it, and Owners' entries show whether an Accountant approved them.
+  Reports, PDF and Excel include both, and can filter by them.
+- **Settings** under *More*, grouped: Users, Categories, Entities, Balances, Language & app, and the Admin panel.
 - **Team sync**: devices share an append-only event log through the KanaanFlow sync service (ASP.NET Core +
-  PostgreSQL on the Pi), so entries are never overwritten. Each team member signs in with a name and password,
-  and the server enforces their role (Owner, Staff, View only). See [`docs/hosting-pi.md`](docs/hosting-pi.md).
+  PostgreSQL on the Pi), so entries are never overwritten. See [`docs/hosting-pi.md`](docs/hosting-pi.md).
 
 Run locally:
 

@@ -74,20 +74,32 @@ The first deploy installs Docker if it's missing and creates a random database p
 
 | Table | What it holds |
 |---|---|
-| `members` | Team members: name, role (Owner / Staff / Viewer), password hash (PBKDF2), active flag. |
+| `members` | Team members: name, role (Admin / Owner / Accountant / Staff / Viewer), password hash (PBKDF2), active flag. |
 | `sessions` | Sign-in tokens (stored only as SHA-256 hashes), one per signed-in device, 180 days sliding. |
 | `events` | The append-only log: `seq` (server order), `id` (from the device, so re-sending is harmless), `member_id` (who uploaded it), `device_id`, `at`, `kind`, `payload` (the change as JSON). Rows are never updated or deleted. |
 
 Devices upload their new events and download everything after the last `seq` they have. Every upload is
-checked against the member's role: View only can't upload, Staff can't change categories, opening balances or
-undo other people's entries, and team changes only happen through the server.
+checked against the member's role, and must be made by the member uploading it (so entries can't be recorded
+in someone else's name):
+
+| Role | Can do |
+|---|---|
+| Admin | Everything, including other Admins and the admin panel (devices, activity log, backup). Can always reset anyone's password. |
+| Owner | All entries, categories, entities and opening balances; adds and changes users except Admins. Their entries show "awaiting approval" until an Accountant approves them (informative only). |
+| Accountant | Same as an Owner, and approves Owners' entries. |
+| Staff (Employee) | Not offered yet. Existing Staff members record entries and undo only their own. |
+| Viewer (Read-only) | Sees balances and reports; can't upload anything. |
+
+Team changes only happen through the server. On the first start after this update, the oldest Owner of an
+existing book becomes its Admin.
 
 ### First time
 
-1. On your phone, open the app, then **More › Sync › Create the team book**. Choose a password. Everything
-   already on that device is uploaded, and you become the owner.
-2. Under **More › Team**, add each member with a name, role and password, and give them both.
-3. They open the app and choose **Team book › Sign in**.
+1. On your phone, open the app and choose **New user**. Pick a name and password and type the master password
+   (`WelcomeToKanaanFlow` unless `KF_MASTER_PASSWORD` is set in `/etc/kanaanflow/db.env`). You become an Admin.
+   Anything already on that device is uploaded.
+2. Under **More › Users**, add each member with a name, role and password, and give them both.
+3. They open the app and choose **Sign in**.
 
 ### Backups
 

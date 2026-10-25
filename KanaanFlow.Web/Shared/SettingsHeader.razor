@@ -1,0 +1,11 @@
+@inherits KfComponent
+
+@* Back to the More hub, then the page title. *@
+<a class="back-link" href="more"><Icon Name="back" Class="flip" Stroke="2.2" />@T("moreTitle")</a>
+<PageTitle>@Title · KanaanFlow</PageTitle>
+<h1 class="h1">@Title</h1>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+}

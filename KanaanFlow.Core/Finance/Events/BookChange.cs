@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(EntryRecorded), "entry.recorded")]
 [JsonDerivedType(typeof(EntryVoided), "entry.voided")]
+[JsonDerivedType(typeof(EntryApproved), "entry.approved")]
 [JsonDerivedType(typeof(ContactSaved), "contact.saved")]
 [JsonDerivedType(typeof(LoanOpened), "loan.opened")]
 [JsonDerivedType(typeof(LoanVoided), "loan.voided")]
@@ -28,6 +29,12 @@ public sealed class EntryRecorded : BookChange
 }
 
 public sealed class EntryVoided : BookChange
+{
+    public string EntryId { get; set; } = string.Empty;
+}
+
+/// <summary>An Accountant approves an Owner's entry. Informative only: balances count the entry either way.</summary>
+public sealed class EntryApproved : BookChange
 {
     public string EntryId { get; set; } = string.Empty;
 }
