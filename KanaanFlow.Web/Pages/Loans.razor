@@ -1,0 +1,194 @@
+@page "/loans"
+@inherits KfComponent
+
+<PageTitle>@T("loansTitle") · KanaanFlow</PageTitle>
+<div class="title-row">
+    <h1 class="h1">@T("loansTitle")</h1>
+    @if (Books.CanRecord)
+    {
+        <a class="btn btn-primary btn-sm" href="loans/new?dir=@(direction == LoanDirection.Lent ? "lent" : "borrowed")"><Icon Name="plus" Size="20" Stroke="2.6" />@T("newLoan")</a>
+    }
+</div>
+
+<div class="grid-2" role="group">
+    <button type="button" class="sel dir-tab" aria-pressed="@(direction == LoanDirection.Lent ? "true" : "false")" @onclick="() => SetTab(LoanDirection.Lent)"><b>@T("lent")</b><span>@T("lentHint")</span></button>
+    <button type="button" class="sel dir-tab" aria-pressed="@(direction == LoanDirection.Borrowed ? "true" : "false")" @onclick="() => SetTab(LoanDirection.Borrowed)"><b>@T("borrowed")</b><span>@T("borrowedHint")</span></button>
+</div>
+
+<div class="@Accent" style="display:flex;flex-direction:column;gap:20px">
+    <section class="section" style="gap:8px">
+        <span style="font-size:16px;font-weight:600" class="muted">@(direction == LoanDirection.Lent ? T("lentTotals") : T("borTotals"))</span>
+        <div class="wrap">
+            @foreach (KeyValuePair<Currency, decimal> total in totals.OrderBy(t => Array.IndexOf(Book.Currencies, t.Key)))
+            {
+                <span class="total-pill"><span class="n ltr" style="font-weight:700;color:var(--accent)">@Fmt.Money(total.Value)</span><span class="s" style="font-weight:600">@Sym(total.Key)</span></span>
+            }
+            @if (totals.Count == 0)
+            {
+                <span class="total-pill"><span class="n ltr" style="font-weight:700;color:var(--accent)">0</span></span>
+            }
+        </div>
+    </section>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+        @foreach (LoanStatus status in cards)
+        {
+            LoanStatus s = status;
+            bool isOpen = openId == s.Loan.Id;
+            <article class="loan-card @(isOpen ? "open" : null)">
+                <button type="button" aria-expanded="@(isOpen ? "true" : "false")" @onclick="() => Toggle(s.Loan.Id)">
+                    <span class="loan-top"><b>@Books.ContactName(s.Loan.ContactId)</b><span class="due-tag @(s.IsOverdue ? "late" : null)">@DueText(s)</span></span>
+                    <span class="loan-rem">
+                        <span class="muted" style="font-size:16px">@T("remaining")</span>
+                        <Money Text="@Fmt.Money(s.Remaining)" Symbol="@Sym(s.Loan.Currency)" />
+                        <span class="muted" style="font-size:15px">@T("outOf") <span class="ltr">@Fmt.Money(s.Loan.Amount)</span></span>
+                    </span>
+                    <span class="bar" aria-hidden="true"><span style="width:@(s.PercentRepaid)%"></span></span>
+                    <span class="muted small">@PaidLine(s)</span>
+                </button>
+                @if (isOpen)
+                {
+                    <div class="loan-body">
+                        <span style="font-size:17px;font-weight:700">@T("payments")</span>
+                        @foreach (LoanPayment payment in s.Payments)
+                        {
+                            <div class="pay-row"><span>@Books.DateText(payment.Date)</span><Money Text="@Fmt.Money(payment.Amount)" Symbol="@Sym(s.Loan.Currency)" /></div>
+                        }
+                        @if (s.Payments.Count == 0)
+                        {
+                            <span class="muted" style="font-size:15px">@T("noPayments")</span>
+                        }
+                        @if (s.IsOpen && Books.CanRecord)
+                        {
+                            <label class="field" style="font-size:16px">@T("payAmount")
+                                <span style="display:flex;gap:8px">
+                                    <input class="input input-mid ltr" style="flex:1;font-weight:700" inputmode="decimal" placeholder="0" @bind="payText" @bind:event="oninput" />
+                                    <button type="button" class="btn btn-accent" style="height:56px" @onclick="() => AddPaymentAsync(s)">@T("addPayment")</button>
+                                </span>
+                            </label>
+                        }
+                    </div>
+                }
+            </article>
+        }
+        @if (cards.Count == 0)
+        {
+            <p class="empty">@T("noLoans")</p>
+        }
+    </div>
+</div>
+
+@code {
+    private LoanDirection direction = LoanDirection.Lent;
+    private string? openId;
+    private string payText = string.Empty;
+    private List<LoanStatus> cards = new List<LoanStatus>();
+    private Dictionary<Currency, decimal> totals = new Dictionary<Currency, decimal>();
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabParam { get; set; }
+
+    [SupplyParameterFromQuery(Name = "open")]
+    public string? OpenParam { get; set; }
+
+    private string Accent => direction == LoanDirection.Lent ? "accent-lent" : "accent-borrowed";
+
+    protected override void OnParametersSet()
+    {
+        direction = TabParam == "borrowed" ? LoanDirection.Borrowed : LoanDirection.Lent;
+        openId = OpenParam;
+        Compute();
+    }
+
+    protected override bool ShouldRender()
+    {
+        Compute();
+        return true;
+    }
+
+    private void Compute()
+    {
+        // Open loans first (overdue on top), then fully repaid ones.
+        cards = BookCalculator.LoanStatuses(Book, Today)
+            .Where(s => s.Loan.Direction == direction)
+            .OrderByDescending(s => s.IsOpen)
+            .ThenByDescending(s => s.IsOverdue)
+            .ThenBy(s => s.Loan.DueDate ?? DateOnly.MaxValue)
+            .ToList();
+        totals = BookCalculator.LoanTotals(Book, direction, Today);
+    }
+
+    private void SetTab(LoanDirection value)
+    {
+        direction = value;
+        openId = null;
+    }
+
+    private void Toggle(string id)
+    {
+        openId = openId == id ? null : id;
+        payText = string.Empty;
+    }
+
+    private string DueText(LoanStatus status)
+    {
+        if (!status.Loan.DueDate.HasValue)
+        {
+            return T("noDue");
+        }
+
+        string date = Books.DateText(status.Loan.DueDate.Value);
+        return status.IsOverdue ? T("overdue") + " · " + date : T("due") + " " + date;
+    }
+
+    private string PaidLine(LoanStatus status)
+    {
+        if (!status.IsOpen)
+        {
+            return T("paidOff");
+        }
+
+        return T("paidSoFar") + " " + Fmt.Money(status.Repaid) + " " + Sym(status.Loan.Currency) + " · " + status.Payments.Count + " " + T("payments");
+    }
+
+    private async Task AddPaymentAsync(LoanStatus status)
+    {
+        decimal? value = Fmt.ParseAmount(payText);
+        if (value == null || value <= 0m)
+        {
+            Toasts.Show(T("enterAmount"));
+            return;
+        }
+
+        decimal amount = Math.Min(value.Value, status.Remaining);
+        Loan loan = status.Loan;
+
+        // A repayment of money I lent comes in; repaying money I borrowed goes out.
+        Entry entry = new Entry
+        {
+            Id = BookService.NewId(),
+            Type = loan.Direction == LoanDirection.Lent ? EntryType.In : EntryType.Out,
+            Amount = amount,
+            Currency = loan.Currency,
+            ContactId = loan.ContactId,
+            CategoryId = EntryCategory.LoanId,
+            Date = Today,
+            Time = DateTime.Now.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+            LoanId = loan.Id,
+            IsLoanPrincipal = false,
+            CreatedBy = Books.Settings.MemberId,
+            CreatedUtc = DateTime.UtcNow
+        };
+
+        await Books.RecordAsync(new EntryRecorded { Entry = entry });
+        payText = string.Empty;
+        string entryId = entry.Id;
+        Toasts.Show(
+            T("saved") + " · " + T("addPayment") + " " + Fmt.Money(amount) + " " + Sym(loan.Currency),
+            undo: async () =>
+            {
+                await Books.RecordAsync(new EntryVoided { EntryId = entryId });
+                Toasts.Show(T("undone"));
+            });
+    }
+}

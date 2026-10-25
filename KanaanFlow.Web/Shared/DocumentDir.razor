@@ -1,0 +1,24 @@
+@implements IDisposable
+@inject BookService Books
+@inject IJSRuntime JS
+
+@* Keeps <html lang/dir> in step with the chosen language, so the whole page mirrors. *@
+
+@code {
+    private string applied = string.Empty;
+
+    public void Dispose() => Books.Changed -= OnChanged;
+
+    protected override void OnInitialized() => Books.Changed += OnChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (applied != Books.Language)
+        {
+            applied = Books.Language;
+            await JS.InvokeVoidAsync("kf.setDocument", Books.Language, Books.IsRtl ? "rtl" : "ltr");
+        }
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}

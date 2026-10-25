@@ -1,0 +1,82 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject BookService Books
+@inject NavigationManager Nav
+
+<DocumentDir />
+@if (Books.Settings.SetupDone)
+{
+    <div class="shell">
+        <header class="app-header">
+            <a class="brand" href="" style="text-decoration:none;color:inherit">
+                <BrandMark Class="brand-mark" />
+                <span class="brand-text">
+                    <span class="brand-name">KanaanFlow</span>
+                    <span class="brand-tag">@Books.T("tagline")</span>
+                </span>
+            </a>
+            <SyncChip />
+        </header>
+
+        <main class="kf-main no-scrollbar">
+            <div class="page" style="zoom:@ZoomText">
+                @Body
+            </div>
+        </main>
+
+        <nav class="tabbar" aria-label="@Books.T("navAria")">
+            @foreach ((string Key, string Href, string Icon, string Label) tab in Tabs)
+            {
+                <a class="tab" href="@tab.Href" aria-current="@(Current == tab.Key ? "page" : null)">
+                    <span class="pill"><Icon Name="@tab.Icon" /></span>@Books.T(tab.Label)
+                </a>
+            }
+        </nav>
+    </div>
+    <ToastHost />
+    <PrintArea />
+}
+
+@code {
+    private static readonly (string Key, string Href, string Icon, string Label)[] Tabs =
+    {
+        ("home", "", "home", "tabHome"),
+        ("people", "people", "people", "tabPeople"),
+        ("loans", "loans", "loan", "tabLoans"),
+        ("reports", "reports", "doc", "tabReports"),
+        ("more", "more", "menu", "tabMore")
+    };
+
+    private string ZoomText => Books.Settings.Zoom.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private string Current
+    {
+        get
+        {
+            string path = Nav.ToBaseRelativePath(Nav.Uri);
+            int cut = path.IndexOfAny(new[] { '/', '?', '#' });
+            string first = cut >= 0 ? path.Substring(0, cut) : path;
+            return first.Length == 0 ? "home" : first;
+        }
+    }
+
+    public void Dispose()
+    {
+        Books.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+
+    protected override void OnInitialized()
+    {
+        Books.Changed += OnChanged;
+        Nav.LocationChanged += OnLocationChanged;
+        if (!Books.Settings.SetupDone)
+        {
+            Nav.NavigateTo("welcome", replace: true);
+        }
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(StateHasChanged);
+}

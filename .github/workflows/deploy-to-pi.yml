@@ -1,0 +1,54 @@
+name: Build & Deploy (Self-hosted Pi)
+
+# Builds the KanaanFlow PWA on the Raspberry Pi and serves it with nginx; the Cloudflare Tunnel publishes it.
+# One-time Pi setup: docs/hosting-pi.md
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-kanaanflow
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, linux, ARM64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test KanaanFlow.Tests/KanaanFlow.Tests.csproj -c Release
+
+      - name: Publish
+        run: dotnet publish KanaanFlow.Web/KanaanFlow.Web.csproj -c Release -o out
+
+      - name: Deploy to web root
+        env:
+          PI_TARGET_DIR: /var/www/kanaanflow
+        run: |
+          sudo mkdir -p "${PI_TARGET_DIR}"
+          sudo rsync -a --delete --timeout=30 ./out/wwwroot/. "${PI_TARGET_DIR}/"
+
+      - name: Install nginx site
+        run: sudo install -m 644 deploy/nginx/kanaanflow.conf /etc/nginx/conf.d/kanaanflow.conf
+
+      - name: Reload Nginx
+        run: |
+          sudo nginx -t
+          sudo systemctl reload nginx
+
+      - name: Smoke test
+        run: |
+          curl -fsS -o /dev/null http://127.0.0.1:8081/
+          curl -fsS -o /dev/null http://127.0.0.1:8081/people
+          curl -fsS -o /dev/null http://127.0.0.1:8081/service-worker.js

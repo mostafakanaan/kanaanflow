@@ -1,0 +1,95 @@
+@page "/"
+@inherits KfComponent
+
+<PageTitle>KanaanFlow</PageTitle>
+
+<section style="display:flex;flex-direction:column;gap:2px">
+    <h1 class="h1">@Greeting</h1>
+    <p class="muted" style="font-size:16px">@Fmt.LongDate(Today, Lang)</p>
+</section>
+
+@if (Books.CanRecord)
+{
+    <div class="big-actions">
+        <a class="big-action in" href="add/in">
+            <span class="ic"><Icon Name="in" Size="28" Stroke="2.4" /></span>
+            <span class="lbl"><b>@T("received")</b><span>@T("receivedSub")</span></span>
+        </a>
+        <a class="big-action out" href="add/out">
+            <span class="ic"><Icon Name="out" Size="28" Stroke="2.4" /></span>
+            <span class="lbl"><b>@T("paid")</b><span>@T("paidSub")</span></span>
+        </a>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-top:-8px">
+        <a class="btn btn-soft btn-tall" href="loans/new"><Icon Name="loan" Size="22" />@T("newLoan")</a>
+        <a class="btn btn-soft btn-tall" href="exchange"><Icon Name="fx" Size="22" />@T("exchange")</a>
+    </div>
+}
+else
+{
+    <p class="notice">@T("viewOnly")</p>
+}
+
+<section class="section">
+    <div class="section-head"><h2 class="h2">@T("cashTitle")</h2><span class="muted small">@T("cashHint")</span></div>
+    <div class="grid-2">
+        @foreach (Currency currency in Book.Currencies)
+        {
+            decimal amount = balances[currency];
+            <div class="cash-card">
+                <span class="name">@Fmt.LongName(currency, Lang)</span>
+                <Money Class="@(amount < 0 ? "neg" : null)" Text="@(amount < 0 ? Fmt.Net(amount) : Fmt.Money(amount))" Symbol="@Sym(currency)" />
+            </div>
+        }
+    </div>
+</section>
+
+<section class="section">
+    <div class="title-row"><h2 class="h2">@T("todayTitle")</h2><a class="link-btn" href="reports">@T("seeAll")</a></div>
+    <div class="list-card">
+        @foreach (Entry entry in todayEntries)
+        {
+            <EntryRow Entry="entry" />
+        }
+        @if (todayEntries.Count == 0)
+        {
+            <p class="empty">@T("noneToday")</p>
+        }
+    </div>
+</section>
+
+@code {
+    private Dictionary<Currency, decimal> balances = new Dictionary<Currency, decimal>();
+    private List<Entry> todayEntries = new List<Entry>();
+
+    private string Greeting
+    {
+        get
+        {
+            string name = Books.Me?.Name.Trim() ?? string.Empty;
+            if (name.Length == 0)
+            {
+                return T("hello");
+            }
+
+            return Lang == "en" ? T("hello") + ", " + name : T("hello") + " " + name;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        Compute();
+    }
+
+    protected override bool ShouldRender()
+    {
+        Compute();
+        return true;
+    }
+
+    private void Compute()
+    {
+        balances = BookCalculator.CashBalances(Book);
+        todayEntries = Book.Entries.Where(e => e.Date == Today).ToList();
+    }
+}

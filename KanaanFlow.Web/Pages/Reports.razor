@@ -1,0 +1,192 @@
+@page "/reports"
+@inherits KfComponent
+@inject ExportService Export
+
+<PageTitle>@T("reportsTitle") · KanaanFlow</PageTitle>
+<h1 class="h1">@T("reportsTitle")</h1>
+
+<section class="section" style="gap:8px">
+    <h2 class="h3">1. @T("period")</h2>
+    <div class="grid-2" style="gap:8px">
+        @foreach ((string Key, string Label) p in Periods)
+        {
+            string key = p.Key;
+            <button type="button" class="sel tile" aria-pressed="@(period == key ? "true" : "false")" @onclick="() => period = key">@T(p.Label)</button>
+        }
+    </div>
+    @if (period == "range")
+    {
+        <div class="grid-2" style="gap:8px">
+            <label class="field" style="font-size:15px;gap:4px">@T("from")<input class="input" style="height:52px;font-size:16px;padding:0 8px" type="date" @bind="from" /></label>
+            <label class="field" style="font-size:15px;gap:4px">@T("to")<input class="input" style="height:52px;font-size:16px;padding:0 8px" type="date" @bind="to" /></label>
+        </div>
+    }
+</section>
+
+<section class="section" style="gap:8px">
+    <h2 class="h3">2. @T("pcatFilter")</h2>
+    <div class="wrap">
+        <button type="button" class="sel chip" aria-pressed="@(peopleCats.Count == 0 ? "true" : "false")" @onclick="() => peopleCats.Clear()">@T("allCats")</button>
+        @foreach (PeopleCategory category in Book.PeopleCategories)
+        {
+            string id = category.Id;
+            <button type="button" class="sel chip" aria-pressed="@(peopleCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(peopleCats, id)">@category.Name(Lang)</button>
+        }
+    </div>
+    <h2 class="h3" style="margin-top:6px">3. @T("types")</h2>
+    <div class="wrap">
+        <button type="button" class="sel chip" aria-pressed="@(entryCats.Count == 0 ? "true" : "false")" @onclick="() => entryCats.Clear()">@T("allTypes")</button>
+        @foreach (EntryCategory category in Book.EntryCategories)
+        {
+            string id = category.Id;
+            <button type="button" class="sel chip" aria-pressed="@(entryCats.Contains(id) ? "true" : "false")" @onclick="() => Toggle(entryCats, id)">@category.Name(Lang)</button>
+        }
+    </div>
+    <label class="field" style="margin-top:4px">@T("person")
+        <select class="select" @bind="personId">
+            <option value="">@T("allPeople")</option>
+            @foreach (Contact contact in Book.Contacts.OrderBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                <option value="@contact.Id">@contact.Name</option>
+            }
+        </select>
+    </label>
+</section>
+
+<section class="list-card">
+    <div class="summary-head"><b>4. @T("summary")</b><span style="font-size:15px">@result.Entries.Count @T("entriesN")</span></div>
+    <div class="tbl-head cols-4"><span>@T("currency")</span><span>@T("inTotal")</span><span>@T("outTotal")</span><span>@T("net")</span></div>
+    @foreach (CurrencyTotals row in result.Totals)
+    {
+        <div class="tbl-row cols-4">
+            <span style="font-weight:700">@Sym(row.Currency)</span>
+            <span class="n c-in">@Fmt.Money(row.In)</span>
+            <span class="n c-out">@Fmt.Money(row.Out)</span>
+            <span class="n">@Fmt.Net(row.Net)</span>
+        </div>
+    }
+    @if (result.Totals.Count == 0)
+    {
+        <p class="empty">@T("noData")</p>
+    }
+</section>
+
+<div class="grid-2">
+    <button type="button" class="btn btn-primary export-btn" @onclick="PdfAsync"><b>PDF</b><span>@T("pdfSub")</span></button>
+    <button type="button" class="btn btn-outline export-btn" @onclick="XlsxAsync"><b>Excel</b><span>@T("xlsSub")</span></button>
+</div>
+
+@if (result.Entries.Count > 0)
+{
+    <section class="section">
+        <h2 class="h2">@T("history")</h2>
+        <div class="list-card">
+            @foreach (Entry entry in result.Entries.Take(shown))
+            {
+                <EntryRow Entry="entry" WithDate="true" />
+            }
+        </div>
+        @if (result.Entries.Count > shown)
+        {
+            <button type="button" class="btn btn-ghost" @onclick="() => shown += 50">+ @(result.Entries.Count - shown)</button>
+        }
+    </section>
+}
+
+@code {
+    private static readonly (string Key, string Label)[] Periods =
+    {
+        ("today", "pToday"), ("week", "pWeek"), ("month", "pMonth"), ("range", "pRange")
+    };
+
+    private string period = "month";
+    private DateOnly from;
+    private DateOnly to;
+    private readonly HashSet<string> peopleCats = new HashSet<string>();
+    private readonly HashSet<string> entryCats = new HashSet<string>();
+    private string personId = string.Empty;
+    private int shown = 50;
+    private ReportResult result = new ReportResult(new ReportFilter(), Array.Empty<Entry>(), Array.Empty<CurrencyTotals>());
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        to = Today;
+        from = new DateOnly(Today.Year, Today.Month, 1);
+    }
+
+    protected override bool ShouldRender()
+    {
+        result = BookCalculator.Report(Book, BuildFilter());
+        return true;
+    }
+
+    protected override void OnParametersSet()
+    {
+        result = BookCalculator.Report(Book, BuildFilter());
+    }
+
+    private ReportFilter BuildFilter()
+    {
+        ReportFilter filter = new ReportFilter { ContactId = personId.Length > 0 ? personId : null };
+        switch (period)
+        {
+            case "today":
+                filter.From = Today;
+                filter.To = Today;
+                break;
+            case "week":
+                filter.From = Today.AddDays(-6);
+                filter.To = Today;
+                break;
+            case "month":
+                filter.From = new DateOnly(Today.Year, Today.Month, 1);
+                filter.To = Today;
+                break;
+            default:
+                filter.From = from <= to ? from : to;
+                filter.To = from <= to ? to : from;
+                break;
+        }
+
+        filter.PeopleCategoryIds.UnionWith(peopleCats);
+        filter.EntryCategoryIds.UnionWith(entryCats);
+        return filter;
+    }
+
+    private static void Toggle(HashSet<string> set, string id)
+    {
+        if (!set.Remove(id))
+        {
+            set.Add(id);
+        }
+    }
+
+    private List<string> Describe()
+    {
+        List<string> lines = new List<string>
+        {
+            T("from") + " " + Books.DateText(result.Filter.From) + " " + T("to") + " " + Books.DateText(result.Filter.To)
+        };
+        if (peopleCats.Count > 0)
+        {
+            lines.Add(T("pcatFilter") + ": " + string.Join("، ", peopleCats.Select(Books.PeopleCategoryName)));
+        }
+
+        if (entryCats.Count > 0)
+        {
+            lines.Add(T("typeCol") + ": " + string.Join("، ", entryCats.Select(Books.EntryCategoryName)));
+        }
+
+        if (personId.Length > 0)
+        {
+            lines.Add(T("personCol") + ": " + Books.ContactName(personId));
+        }
+
+        return lines;
+    }
+
+    private Task PdfAsync() => Export.PrintReportAsync(result, T("reportName"), Describe());
+
+    private Task XlsxAsync() => Export.ExportReportXlsxAsync(result);
+}
