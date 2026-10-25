@@ -10,6 +10,15 @@ phone ──https──▶ Cloudflare ──tunnel──▶ cloudflared (Pi) ─
 
 ## One-time setup
 
+**Quick way:** `deploy/setup-pi.sh` does steps 1–3 for you. Get a runner token (step 1 below), then on the Pi:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mostafakanaan/kanaanflow/main/deploy/setup-pi.sh \
+  | bash -s -- --token <RUNNER_TOKEN> --hostname flow.<your-domain>
+```
+
+Or step by step:
+
 1. **Add a runner for this repo on the Pi.** Runners on a personal account belong to one repo, so the
    portfolio's runner won't pick up KanaanFlow jobs. On GitHub: *kanaanflow › Settings › Actions ›
    Runners › New self-hosted runner* (Linux, ARM64). On the Pi, follow the commands it shows in a
