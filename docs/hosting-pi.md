@@ -101,6 +101,10 @@ existing book becomes its Admin.
 2. Under **More › Users**, add each member with a name, role and password, and give them both.
 3. They open the app and choose **Sign in**.
 
+Forgot a password? On the login screen, tap **Forgot password?**, then enter the name, a new password and the
+master password. That person is signed out on their other devices. Admins can also reset anyone's password
+under **More › Users**.
+
 ### Backups
 
 `kanaanflow-backup.timer` runs `pg_dump` every night at 03:30 into `/var/backups/kanaanflow/`, keeping 14 days.

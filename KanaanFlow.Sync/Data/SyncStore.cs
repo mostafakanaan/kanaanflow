@@ -167,6 +167,52 @@ public sealed class SyncStore
         return new SessionResponse(token, member);
     }
 
+    /// <summary>
+    /// Sets a new password for the active member with this name (the person knew the master password), signs them out
+    /// everywhere and returns a new session. Returns null when no active member has that name.
+    /// </summary>
+    public async Task<SessionResponse?> ResetPasswordByNameAsync(string name, string newPassword, string clientIp)
+    {
+        await using NpgsqlConnection connection = await db.OpenConnectionAsync();
+        await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
+        MemberDto? member = null;
+        await using (NpgsqlCommand find = new NpgsqlCommand(
+            "select id, name, role from members where active and lower(name) = lower(@name)", connection, tx))
+        {
+            find.Parameters.AddWithValue("name", name.Trim());
+            await using NpgsqlDataReader reader = await find.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                member = new MemberDto(reader.GetString(0), reader.GetString(1), reader.GetString(2), true);
+            }
+        }
+
+        // Hash either way, so an unknown name takes as long as a real one and names can't be probed.
+        string hash = PasswordHasher.Hash(newPassword);
+        if (member == null)
+        {
+            return null;
+        }
+
+        await using (NpgsqlCommand update = new NpgsqlCommand("update members set password_hash = @hash where id = @id", connection, tx))
+        {
+            update.Parameters.AddWithValue("hash", hash);
+            update.Parameters.AddWithValue("id", member.Id);
+            await update.ExecuteNonQueryAsync();
+        }
+
+        await using (NpgsqlCommand signOut = new NpgsqlCommand("delete from sessions where member_id = @id", connection, tx))
+        {
+            signOut.Parameters.AddWithValue("id", member.Id);
+            await signOut.ExecuteNonQueryAsync();
+        }
+
+        string token = await CreateSessionAsync(connection, tx, member.Id);
+        await tx.CommitAsync();
+        logger.LogWarning("Password of {Name} ({Id}) was reset with the master password from {Ip}.", member.Name, member.Id, clientIp);
+        return new SessionResponse(token, member);
+    }
+
     /// <summary>The active member a session token belongs to, extending the session as it is used.</summary>
     public async Task<MemberDto?> AuthenticateAsync(string token)
     {

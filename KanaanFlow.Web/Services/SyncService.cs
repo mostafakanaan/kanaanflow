@@ -88,6 +88,13 @@ public sealed class SyncService : IDisposable
         await StartSessionAsync(session);
     }
 
+    /// <summary>Sets a new password for a forgotten one (needs the master password) and signs in with it.</summary>
+    public async Task ResetPasswordAsync(string name, string masterPassword, string newPassword)
+    {
+        ApiSession session = await api.ResetPasswordAsync(name, masterPassword, newPassword);
+        await StartSessionAsync(session);
+    }
+
     /// <summary>Logs out on this device (and ends the server session). Unsynced changes stay until their author logs in again.</summary>
     public async Task LogOutAsync()
     {
