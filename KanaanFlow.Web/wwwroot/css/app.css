@@ -532,3 +532,11 @@ h1:focus { outline: none; }
 .month-row .row-title { white-space: normal; }
 .salary-sum .tbl-row > span:first-child { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .salary-sum.cols-4, .salary-sum .cols-4 { grid-template-columns: 1fr 1.3fr 1.2fr 1.3fr; }
+
+/* ---------- notices that must not be missed ---------- */
+.notice-alert { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--out-bg); color: var(--out-fg); font-weight: 600; }
+.notice-alert .link-btn { color: var(--out-fg); flex: 0 0 auto; }
+.danger-card { border-color: #F0C6AC; }
+.btn-danger { background: var(--out); color: #fff; }
+.check { display: flex; align-items: flex-start; gap: 10px; font-size: 16px; line-height: 1.45; }
+.check input { width: 22px; height: 22px; margin-top: 2px; flex: 0 0 auto; accent-color: var(--out); }

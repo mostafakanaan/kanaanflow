@@ -353,6 +353,40 @@ public sealed class BookService
         Changed?.Invoke();
     }
 
+    /// <summary>Removes the whole book from this device: every change, synced or not. Settings and log-in stay.</summary>
+    public async Task ClearBookAsync()
+    {
+        await store.ClearEventsAsync();
+        events.Clear();
+        unsynced.Clear();
+        Settings.PulledSeq = 0;
+        await SaveSettingsAsync();
+        Rebuild();
+        Changed?.Invoke();
+    }
+
+    /// <summary>
+    /// Empties a book kept only on this device. Its users stay (they live in the book too), or only the logged-in one
+    /// when <paramref name="removeMembers"/>.
+    /// </summary>
+    public async Task ResetLocalBookAsync(bool removeMembers)
+    {
+        List<TeamMember> keep = Book.Members
+            .Where(m => !removeMembers || m.Id == Settings.MemberId)
+            .Select(m => m.Clone())
+            .ToList();
+        if (removeMembers)
+        {
+            Settings.LocalAccounts.RemoveAll(a => a.MemberId != Settings.MemberId);
+        }
+
+        await ClearBookAsync();
+        if (keep.Count > 0)
+        {
+            await RecordAsync(keep.Select(m => (BookChange)new MemberSaved { Member = m }).ToArray());
+        }
+    }
+
     /// <summary>Unsynced changes that would add to a shared book (team changes are managed by the server).</summary>
     public int PendingBookChanges => unsynced.Count(id => events[id].Change is not MemberSaved and not MemberRemoved);
 

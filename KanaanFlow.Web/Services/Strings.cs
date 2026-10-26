@@ -431,6 +431,17 @@ public static class Strings
         ["optional"] = "اختياري",
         ["err-salaries-managers-only"] = "الرواتب للمدير والمالك والمحاسب فقط",
         ["kind-salary.set"] = "حدّد راتباً",
+        ["resetBook"] = "حذف كل بيانات الدفتر",
+        ["resetBookHint"] = "يحذف كل الحركات والأشخاص والديون والرواتب والفئات وأرصدة البداية عند الجميع. يحتفظ الخادم بنسخة، فيمكن استرجاع الدفتر يدوياً إذا حدث خطأ.",
+        ["resetBookLocalHint"] = "يحذف كل الحركات والأشخاص والديون والرواتب والفئات وأرصدة البداية على هذا الجهاز. لا يمكن التراجع عن ذلك.",
+        ["resetRemoveMembers"] = "احذف أيضاً كل المستخدمين وسجّل خروج الجميع (ما عداك)",
+        ["resetRemoveMembersLocal"] = "احذف أيضاً كل مستخدمي هذا الجهاز (ما عداك)",
+        ["resetPasswordLabel"] = "كلمة المرور الخاصة بك للتأكيد",
+        ["resetButton"] = "حذف كل البيانات",
+        ["resetDone"] = "تم حذف بيانات الدفتر",
+        ["bookResetNotice"] = "قام المسؤول بحذف بيانات الدفتر. حُذفت نسخة هذا الجهاز، ومعها التغييرات التي تمت بدون إنترنت.",
+        ["bookResetSignedOut"] = "قام المسؤول بحذف بيانات الدفتر وحذف كل المستخدمين، فتم تسجيل خروجك. حُذفت نسخة هذا الجهاز.",
+        ["gotIt"] = "حسناً"
     };
 
     public static readonly Dictionary<string, string> En = new Dictionary<string, string>
@@ -836,5 +847,16 @@ public static class Strings
         ["optional"] = "optional",
         ["err-salaries-managers-only"] = "Salaries are for Admins, Owners and Accountants",
         ["kind-salary.set"] = "set a salary",
+        ["resetBook"] = "Reset the book",
+        ["resetBookHint"] = "Deletes every entry, person, loan, salary, category and opening balance for everyone. The server keeps a copy, so a mistaken reset can be undone by hand.",
+        ["resetBookLocalHint"] = "Deletes every entry, person, loan, salary, category and opening balance on this device. This can't be undone.",
+        ["resetRemoveMembers"] = "Also remove all users and sign everyone out (except you)",
+        ["resetRemoveMembersLocal"] = "Also remove all users of this device (except you)",
+        ["resetPasswordLabel"] = "Your password, to confirm",
+        ["resetButton"] = "Reset book",
+        ["resetDone"] = "The book was reset",
+        ["bookResetNotice"] = "An Admin reset the book. This device's copy was removed, including changes made offline.",
+        ["bookResetSignedOut"] = "An Admin reset the book and removed all users, so you've been logged out. This device's copy was removed.",
+        ["gotIt"] = "OK"
     };
 }

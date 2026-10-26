@@ -120,6 +120,38 @@ Restore a backup:
 sudo docker exec -i kanaanflow-db pg_restore -U kanaanflow -d kanaanflow --clean < /var/backups/kanaanflow/kanaanflow-YYYY-MM-DD.dump
 ```
 
+### Resetting the book
+
+Admins can empty the book for everyone under **More › Admin › Reset the book**, confirmed with their password.
+Optionally it also removes every other user and signs everyone out (the Admin who resets stays).
+
+- The book gets a new version (`book.epoch`). Each device notices at its next sync, removes its copy and shows a
+  notice until it's dismissed. A device that was offline keeps working on its old copy; when it reconnects, its
+  offline changes are refused (they belong to the old book) and dropped, and the person is told.
+- Nothing is lost on the server: the old events move to the `events_archive` table, tagged with the old epoch.
+
+Undo a reset by hand (this replaces the current book with the one from before the chosen reset):
+
+```bash
+sudo docker exec -it kanaanflow-db psql -U kanaanflow -d kanaanflow
+```
+
+```sql
+-- Every reset so far, oldest first.
+select epoch, count(*) as events, max(archived_at) as reset_at from events_archive group by epoch order by reset_at;
+
+begin;
+delete from events;
+insert into events (seq, id, member_id, device_id, at, kind, payload, received_at)
+select seq, id, member_id, device_id, at, kind, payload, received_at from events_archive where epoch = '<epoch from the list>';
+-- A new version makes every device drop its copy and download the restored book.
+update book set epoch = md5(random()::text || clock_timestamp()::text);
+commit;
+
+-- Only if users were removed by that reset: bring them back.
+update members set active = true where id in (select distinct member_id from events);
+```
+
 ### Useful commands
 
 ```bash

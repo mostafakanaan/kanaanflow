@@ -2,6 +2,8 @@
 @inherits KfComponent
 @inject ApiClient Api
 @inject ExportService Export
+@inject SyncService Sync
+@inject LocalAuth Auth
 
 <SettingsHeader Title="@T("adminPanel")" />
 
@@ -84,6 +86,19 @@ else
         <button type="button" class="btn btn-outline" @onclick="Export.ExportBackupAsync"><Icon Name="download" Size="22" />@T("downloadBackup")</button>
     </section>
 
+    <section class="card card-pad danger-card" aria-labelledby="reset-title">
+        <h2 class="h3" id="reset-title">@T("resetBook")</h2>
+        <p class="muted" style="font-size:15px;line-height:1.5">@(Books.Settings.SignedIn ? T("resetBookHint") : T("resetBookLocalHint"))</p>
+        <label class="check">
+            <input type="checkbox" @bind="resetRemoveMembers" />
+            <span>@(Books.Settings.SignedIn ? T("resetRemoveMembers") : T("resetRemoveMembersLocal"))</span>
+        </label>
+        <label class="field">@T("resetPasswordLabel")
+            <input class="input" type="password" @bind="resetPassword" @bind:event="oninput" autocomplete="current-password" />
+        </label>
+        <button type="button" class="btn btn-danger" disabled="@(busy || resetPassword.Length == 0)" @onclick="ResetBookAsync"><Icon Name="trash" Size="22" />@T("resetButton")</button>
+    </section>
+
     @if (error.Length > 0)
     {
         <p class="err-text" style="text-align:start" role="alert">@error</p>
@@ -96,6 +111,8 @@ else
     private List<ApiActivity> activity = new List<ApiActivity>();
     private int shown = 25;
     private bool busy;
+    private bool resetRemoveMembers;
+    private string resetPassword = string.Empty;
     private string error = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -137,6 +154,47 @@ else
         await Api.AdminSignOutAsync(memberId);
         Toasts.Show(T("signedOutEverywhere") + " · " + name);
     });
+
+    private async Task ResetBookAsync()
+    {
+        busy = true;
+        error = string.Empty;
+        try
+        {
+            if (Books.Settings.SignedIn)
+            {
+                await Sync.ResetTeamBookAsync(resetPassword, resetRemoveMembers);
+                overview = await Api.AdminOverviewAsync();
+                sessions = await Api.AdminSessionsAsync();
+                activity = await Api.AdminActivityAsync(200);
+            }
+            else if (Auth.IsMyPassword(resetPassword))
+            {
+                await Books.ResetLocalBookAsync(resetRemoveMembers);
+            }
+            else
+            {
+                error = ErrorText.For(Books, "wrong-password");
+                return;
+            }
+
+            resetPassword = string.Empty;
+            resetRemoveMembers = false;
+            Toasts.Show(T("resetDone"));
+        }
+        catch (ApiException ex)
+        {
+            error = ErrorText.For(Books, ex.Code);
+        }
+        catch (HttpRequestException)
+        {
+            error = T("noConnection");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
 
     private string When(DateTime utc)
     {
