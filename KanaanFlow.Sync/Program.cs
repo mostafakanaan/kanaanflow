@@ -54,7 +54,7 @@ api.MapGet("/health", async (NpgsqlDataSource db) =>
     return Results.Ok(new { status = "ok" });
 });
 
-api.MapGet("/status", async (SyncStore store) => Results.Ok(new StatusResponse(await store.IsReadyAsync())));
+api.MapGet("/status", async (SyncStore store) => Results.Ok(await store.StatusAsync()));
 
 // Creating a new user needs the master password. New users are Admins.
 api.MapPost("/register", async (RegisterRequest request, SyncStore store) =>
@@ -236,6 +236,24 @@ admin.MapGet("/activity", async (int? limit, HttpContext context, SyncStore stor
     return me == null ? Unauthorized() : !IsAdmin(me) ? AdminOnly() : Results.Ok(await store.ActivityAsync(limit ?? 100));
 });
 
+// Empties the book for everyone (Admins only, confirmed with their password). Optionally removes the whole team.
+admin.MapPost("/reset", async (ResetBookRequest request, HttpContext context, SyncStore store) =>
+{
+    MemberDto? me = await SignedIn(context, store);
+    if (me == null)
+    {
+        return Unauthorized();
+    }
+
+    if (!IsAdmin(me))
+    {
+        return AdminOnly();
+    }
+
+    ResetBookResponse? reset = await store.ResetBookAsync(me, request.Password ?? string.Empty, request.RemoveMembers, BearerToken(context)!);
+    return reset == null ? Error("wrong-password", StatusCodes.Status403Forbidden) : Results.Ok(reset);
+}).RequireRateLimiting("signin");
+
 // Download: everything after the last sequence number the device has.
 api.MapGet("/events", async (long? after, int? limit, HttpContext context, SyncStore store) =>
 {
@@ -245,14 +263,14 @@ api.MapGet("/events", async (long? after, int? limit, HttpContext context, SyncS
         return Unauthorized();
     }
 
-    List<(long Seq, string Payload)> rows = await store.EventsAfterAsync(Math.Max(0, after ?? 0), limit ?? SyncStore.MaxPage);
+    (string epoch, List<(long Seq, string Payload)> rows) = await store.EventsAfterAsync(Math.Max(0, after ?? 0), limit ?? SyncStore.MaxPage);
     JsonArray events = new JsonArray();
     foreach ((long seq, string payload) in rows)
     {
         events.Add(new JsonObject { ["seq"] = seq, ["event"] = JsonNode.Parse(payload) });
     }
 
-    return Results.Content(new JsonObject { ["events"] = events }.ToJsonString(), "application/json");
+    return Results.Content(new JsonObject { ["epoch"] = epoch, ["events"] = events }.ToJsonString(), "application/json");
 });
 
 // Upload: the device's new events. Each one is checked against the member's role.
@@ -305,7 +323,17 @@ api.MapPost("/events", async (HttpContext context, SyncStore store) =>
         incoming.Add(bookEvent);
     }
 
-    PushResponse result = await store.PushAsync(me, incoming);
+    PushResponse result;
+    try
+    {
+        result = await store.PushAsync(me, incoming, context.Request.Headers["X-Book-Epoch"].FirstOrDefault());
+    }
+    catch (BookResetException reset)
+    {
+        // Changes made on an outdated copy of the book: the device drops its copy and downloads the new one.
+        return Results.Json(new { error = "book-reset", epoch = reset.Epoch }, statusCode: StatusCodes.Status409Conflict);
+    }
+
     result.Rejected.AddRange(unreadable);
     return Results.Ok(result);
 });

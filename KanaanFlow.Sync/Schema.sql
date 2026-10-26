@@ -42,3 +42,26 @@ create table if not exists events (
 create index if not exists events_recorded_entry on events ((payload -> 'change' -> 'entry' ->> 'id')) where kind = 'entry.recorded';
 create index if not exists events_about_entry on events ((payload -> 'change' ->> 'entryId'));
 create index if not exists events_opened_loan on events ((payload -> 'change' -> 'loan' ->> 'id')) where kind = 'loan.opened';
+
+-- The book's version. A reset gives it a new epoch, which tells every device to drop its old copy.
+create table if not exists book (
+    id       int         primary key check (id = 1),
+    epoch    text        not null,
+    reset_at timestamptz
+);
+
+insert into book (id, epoch) values (1, md5(random()::text || clock_timestamp()::text)) on conflict (id) do nothing;
+
+-- Events from before a reset, kept so a reset can be undone by hand.
+create table if not exists events_archive (
+    seq         bigint      not null,
+    id          text        not null,
+    member_id   text        not null,
+    device_id   text        not null,
+    at          timestamptz not null,
+    kind        text        not null,
+    payload     jsonb       not null,
+    received_at timestamptz not null,
+    epoch       text        not null,
+    archived_at timestamptz not null default now()
+);

@@ -45,6 +45,12 @@ public sealed class DeviceSettings
 
     public DateTime? LastSyncUtc { get; set; }
 
+    /// <summary>The version of the team book this device holds; a different one on the server means an Admin reset it.</summary>
+    public string BookEpoch { get; set; } = string.Empty;
+
+    /// <summary>A message for the person that must not be missed (such as "the book was reset"), shown until dismissed.</summary>
+    public string Notice { get; set; } = string.Empty;
+
     public bool SignedIn => !string.IsNullOrEmpty(Token);
 }
 

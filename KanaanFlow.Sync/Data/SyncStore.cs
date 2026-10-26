@@ -105,10 +105,12 @@ public sealed class SyncStore
         logger.LogInformation("Made {Name} the Admin of this book.", owner.Name);
     }
 
-    public async Task<bool> IsReadyAsync()
+    public async Task<StatusResponse> StatusAsync()
     {
-        await using NpgsqlCommand command = db.CreateCommand("select exists (select 1 from members)");
-        return (bool)(await command.ExecuteScalarAsync())!;
+        await using NpgsqlCommand command = db.CreateCommand("select exists (select 1 from members), (select epoch from book where id = 1)");
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return new StatusResponse(reader.GetBoolean(0), reader.GetString(1));
     }
 
     /// <summary>
@@ -131,8 +133,9 @@ public sealed class SyncStore
         await InsertMemberAsync(connection, tx, admin, PasswordHasher.Hash(password));
         await AppendMemberEventAsync(connection, tx, admin, actorId: id);
         string token = await CreateSessionAsync(connection, tx, id);
+        string epoch = await EpochAsync(connection, tx);
         await tx.CommitAsync();
-        return new SessionResponse(token, admin);
+        return new SessionResponse(token, admin, epoch);
     }
 
     public async Task<SessionResponse?> LoginAsync(string name, string password)
@@ -163,8 +166,9 @@ public sealed class SyncStore
 
         await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
         string token = await CreateSessionAsync(connection, tx, id!);
+        string epoch = await EpochAsync(connection, tx);
         await tx.CommitAsync();
-        return new SessionResponse(token, member);
+        return new SessionResponse(token, member, epoch);
     }
 
     /// <summary>
@@ -208,9 +212,10 @@ public sealed class SyncStore
         }
 
         string token = await CreateSessionAsync(connection, tx, member.Id);
+        string epoch = await EpochAsync(connection, tx);
         await tx.CommitAsync();
         logger.LogWarning("Password of {Name} ({Id}) was reset with the master password from {Ip}.", member.Name, member.Id, clientIp);
-        return new SessionResponse(token, member);
+        return new SessionResponse(token, member, epoch);
     }
 
     /// <summary>The active member a session token belongs to, extending the session as it is used.</summary>
@@ -379,24 +384,36 @@ public sealed class SyncStore
         return true;
     }
 
-    /// <summary>Events after <paramref name="after"/>, as stored JSON, in server order.</summary>
-    public async Task<List<(long Seq, string Payload)>> EventsAfterAsync(long after, int limit)
+    /// <summary>
+    /// Events after <paramref name="after"/>, as stored JSON, in server order, with the book's version they belong to.
+    /// Both are read from one snapshot, so a reset can't slip in between.
+    /// </summary>
+    public async Task<(string Epoch, List<(long Seq, string Payload)> Rows)> EventsAfterAsync(long after, int limit)
     {
+        await using NpgsqlConnection connection = await db.OpenConnectionAsync();
+        await using NpgsqlTransaction tx = await connection.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+        string epoch = await EpochAsync(connection, tx);
         List<(long, string)> rows = new List<(long, string)>();
-        await using NpgsqlCommand command = db.CreateCommand("select seq, payload::text from events where seq > @after order by seq limit @limit");
-        command.Parameters.AddWithValue("after", after);
-        command.Parameters.AddWithValue("limit", Math.Clamp(limit, 1, MaxPage));
-        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        await using (NpgsqlCommand command = new NpgsqlCommand("select seq, payload::text from events where seq > @after order by seq limit @limit", connection, tx))
         {
-            rows.Add((reader.GetInt64(0), reader.GetString(1)));
+            command.Parameters.AddWithValue("after", after);
+            command.Parameters.AddWithValue("limit", Math.Clamp(limit, 1, MaxPage));
+            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                rows.Add((reader.GetInt64(0), reader.GetString(1)));
+            }
         }
 
-        return rows;
+        await tx.CommitAsync();
+        return (epoch, rows);
     }
 
-    /// <summary>Checks each event against the member's role and appends the allowed ones. Re-sent events count as accepted.</summary>
-    public async Task<PushResponse> PushAsync(MemberDto member, IReadOnlyList<BookEvent> incoming)
+    /// <summary>
+    /// Checks each event against the member's role and appends the allowed ones. Re-sent events count as accepted.
+    /// Throws <see cref="BookResetException"/> when the device's changes belong to a version of the book from before a reset.
+    /// </summary>
+    public async Task<PushResponse> PushAsync(MemberDto member, IReadOnlyList<BookEvent> incoming, string? deviceEpoch)
     {
         TeamRole role = Enum.Parse<TeamRole>(member.Role);
         List<string> accepted = new List<string>();
@@ -405,6 +422,13 @@ public sealed class SyncStore
         await using NpgsqlConnection connection = await db.OpenConnectionAsync();
         await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
         await LockLogAsync(connection, tx);
+
+        // Devices from before epochs existed send none; everyone else must be on the current book.
+        string epoch = await EpochAsync(connection, tx);
+        if (!string.IsNullOrEmpty(deviceEpoch) && deviceEpoch != epoch)
+        {
+            throw new BookResetException(epoch);
+        }
 
         HashSet<string> known = await ExistingIdsAsync(connection, tx, incoming.Select(e => e.Id).ToList());
         HashSet<string> purged = await PurgedAmongAsync(
@@ -453,6 +477,93 @@ public sealed class SyncStore
 
         await tx.CommitAsync();
         return new PushResponse(accepted, rejected);
+    }
+
+    /// <summary>
+    /// Empties the book for everyone: its events move to <c>events_archive</c> (so a reset can be undone by hand) and the book
+    /// gets a new epoch, which makes every device drop its copy. The team stays, unless <paramref name="removeMembers"/>:
+    /// then everyone but the Admin who resets is removed and signed out. Returns null when the password is wrong.
+    /// </summary>
+    public async Task<ResetBookResponse?> ResetBookAsync(MemberDto admin, string password, bool removeMembers, string keepToken)
+    {
+        await using NpgsqlConnection connection = await db.OpenConnectionAsync();
+        await using NpgsqlTransaction tx = await connection.BeginTransactionAsync();
+
+        string? hash;
+        await using (NpgsqlCommand find = new NpgsqlCommand("select password_hash from members where id = @id and active", connection, tx))
+        {
+            find.Parameters.AddWithValue("id", admin.Id);
+            hash = (string?)await find.ExecuteScalarAsync();
+        }
+
+        if (hash == null || !PasswordHasher.Verify(password, hash))
+        {
+            return null;
+        }
+
+        await LockLogAsync(connection, tx);
+        string oldEpoch = await EpochAsync(connection, tx);
+        string newEpoch = NewId();
+
+        int archived;
+        await using (NpgsqlCommand archive = new NpgsqlCommand(
+            "insert into events_archive (seq, id, member_id, device_id, at, kind, payload, received_at, epoch) "
+            + "select seq, id, member_id, device_id, at, kind, payload, received_at, @epoch from events", connection, tx))
+        {
+            archive.Parameters.AddWithValue("epoch", oldEpoch);
+            archived = await archive.ExecuteNonQueryAsync();
+        }
+
+        await using (NpgsqlCommand empty = new NpgsqlCommand("delete from events", connection, tx))
+        {
+            await empty.ExecuteNonQueryAsync();
+        }
+
+        await using (NpgsqlCommand version = new NpgsqlCommand("update book set epoch = @epoch, reset_at = now() where id = 1", connection, tx))
+        {
+            version.Parameters.AddWithValue("epoch", newEpoch);
+            await version.ExecuteNonQueryAsync();
+        }
+
+        int removed = 0;
+        if (removeMembers)
+        {
+            await using (NpgsqlCommand deactivate = new NpgsqlCommand("update members set active = false where active and id <> @id", connection, tx))
+            {
+                deactivate.Parameters.AddWithValue("id", admin.Id);
+                removed = await deactivate.ExecuteNonQueryAsync();
+            }
+
+            // Everyone else is signed out, the Admin's other devices included; this device stays signed in.
+            await using NpgsqlCommand signOut = new NpgsqlCommand("delete from sessions where token_hash <> @keep", connection, tx);
+            signOut.Parameters.AddWithValue("keep", PasswordHasher.HashToken(keepToken));
+            await signOut.ExecuteNonQueryAsync();
+        }
+
+        // The team list lived in the log too: announce the remaining members again in the empty book.
+        List<MemberDto> team = new List<MemberDto>();
+        await using (NpgsqlCommand members = new NpgsqlCommand("select id, name, role from members where active order by created_at", connection, tx))
+        await using (NpgsqlDataReader reader = await members.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                team.Add(new MemberDto(reader.GetString(0), reader.GetString(1), reader.GetString(2), true));
+            }
+        }
+
+        foreach (MemberDto member in team)
+        {
+            await AppendMemberEventAsync(connection, tx, member, admin.Id);
+        }
+
+        await tx.CommitAsync();
+        logger.LogWarning(
+            "{Name} reset the book: {Archived} events archived under epoch {Epoch}, {Removed} members removed.",
+            admin.Name,
+            archived,
+            oldEpoch,
+            removed);
+        return new ResetBookResponse(newEpoch, archived, removed);
     }
 
     /// <summary>Counts for the admin panel.</summary>
@@ -530,6 +641,12 @@ public sealed class SyncStore
         await using NpgsqlCommand command = new NpgsqlCommand("select pg_advisory_xact_lock(@key)", connection, tx);
         command.Parameters.AddWithValue("key", LogLock);
         await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task<string> EpochAsync(NpgsqlConnection connection, NpgsqlTransaction tx)
+    {
+        await using NpgsqlCommand command = new NpgsqlCommand("select epoch from book where id = 1", connection, tx);
+        return (string)(await command.ExecuteScalarAsync())!;
     }
 
     private static async Task<string> CreateSessionAsync(NpgsqlConnection connection, NpgsqlTransaction tx, string memberId)

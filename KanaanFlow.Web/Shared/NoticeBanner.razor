@@ -1,0 +1,25 @@
+@implements IDisposable
+@inject BookService Books
+
+@* A message that must not be missed (such as "the book was reset"); stays until the person closes it. *@
+@if (Books.Settings.Notice.Length > 0)
+{
+    <div class="notice notice-alert" role="alert">
+        <span>@Books.T(Books.Settings.Notice)</span>
+        <button type="button" class="link-btn" @onclick="DismissAsync">@Books.T("gotIt")</button>
+    </div>
+}
+
+@code {
+    public void Dispose() => Books.Changed -= OnChanged;
+
+    protected override void OnInitialized() => Books.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task DismissAsync()
+    {
+        Books.Settings.Notice = string.Empty;
+        await Books.SaveSettingsAsync();
+    }
+}

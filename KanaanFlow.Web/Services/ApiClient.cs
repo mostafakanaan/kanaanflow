@@ -15,7 +15,8 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 public sealed record ApiMember(string Id, string Name, TeamRole Role, bool Active);
 
-public sealed record ApiSession(string Token, ApiMember Member);
+/// <summary>Epoch: the version of the book on the server, new after every reset.</summary>
+public sealed record ApiSession(string Token, ApiMember Member, string Epoch);
 
 public sealed record ApiOverview(long Members, long Events, long Sessions, DateTime? LastChangeUtc);
 
@@ -174,7 +175,8 @@ public sealed class ApiClient
         return rows;
     }
 
-    public async Task<PushResult> PushAsync(IReadOnlyList<BookEvent> events)
+    /// <summary>Uploads changes made on the book version <paramref name="epoch"/>. Throws "book-reset" when the book was reset since.</summary>
+    public async Task<PushResult> PushAsync(IReadOnlyList<BookEvent> events, string epoch)
     {
         StringBuilder json = new StringBuilder("[");
         for (int i = 0; i < events.Count; i++)
@@ -183,7 +185,7 @@ public sealed class ApiClient
         }
 
         json.Append(']');
-        JsonNode? body = await SendRawAsync(HttpMethod.Post, "events", json.ToString(), authorized: true);
+        JsonNode? body = await SendRawAsync(HttpMethod.Post, "events", json.ToString(), authorized: true, bookEpoch: epoch);
         List<string> accepted = new List<string>();
         foreach (JsonNode? id in body?["accepted"]?.AsArray() ?? new JsonArray())
         {
@@ -199,8 +201,11 @@ public sealed class ApiClient
         return new PushResult(accepted, rejected);
     }
 
-    /// <summary>Events after a server sequence number, oldest first. Unreadable events (from a newer app) are skipped.</summary>
-    public async Task<List<(long Seq, BookEvent? Event)>> PullAsync(long after, int limit)
+    /// <summary>
+    /// Events after a server sequence number, oldest first, and the book version they belong to.
+    /// Unreadable events (from a newer app) come back as null.
+    /// </summary>
+    public async Task<(string Epoch, List<(long Seq, BookEvent? Event)> Rows)> PullAsync(long after, int limit)
     {
         JsonNode? body = await SendAsync(
             HttpMethod.Get,
@@ -225,7 +230,32 @@ public sealed class ApiClient
             rows.Add((seq, bookEvent));
         }
 
-        return rows;
+        return (body?["epoch"]?.GetValue<string>() ?? string.Empty, rows);
+    }
+
+    /// <summary>The server book's version, or null when there's no server to ask.</summary>
+    public async Task<string?> EpochAsync()
+    {
+        try
+        {
+            JsonNode? body = await SendAsync(HttpMethod.Get, "status", null, authorized: false);
+            return body?["epoch"]?.GetValue<string>();
+        }
+        catch (Exception ex) when (ex is HttpRequestException || ex is ApiException || ex is JsonException || ex is TaskCanceledException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Empties the book on the server for everyone (Admins only). Returns the book's new version.</summary>
+    public async Task<string> ResetBookAsync(string password, bool removeMembers)
+    {
+        JsonNode? body = await SendAsync(
+            HttpMethod.Post,
+            "admin/reset",
+            new JsonObject { ["password"] = password, ["removeMembers"] = removeMembers },
+            authorized: true);
+        return body!["epoch"]!.GetValue<string>();
     }
 
     private static DateTime? ReadTime(JsonNode? node)
@@ -238,7 +268,7 @@ public sealed class ApiClient
 
     private static ApiSession ReadSession(JsonNode? body)
     {
-        return new ApiSession(body!["token"]!.GetValue<string>(), ReadMember(body["member"]));
+        return new ApiSession(body!["token"]!.GetValue<string>(), ReadMember(body["member"]), body["epoch"]?.GetValue<string>() ?? string.Empty);
     }
 
     private static ApiMember ReadMember(JsonNode? node)
@@ -255,9 +285,14 @@ public sealed class ApiClient
         return SendRawAsync(method, path, content?.ToJsonString(), authorized);
     }
 
-    private async Task<JsonNode?> SendRawAsync(HttpMethod method, string path, string? json, bool authorized)
+    private async Task<JsonNode?> SendRawAsync(HttpMethod method, string path, string? json, bool authorized, string? bookEpoch = null)
     {
         using HttpRequestMessage request = new HttpRequestMessage(method, baseUri + "api/" + path);
+        if (!string.IsNullOrEmpty(bookEpoch))
+        {
+            request.Headers.Add("X-Book-Epoch", bookEpoch);
+        }
+
         if (authorized && book.Settings.Token.Length > 0)
         {
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", book.Settings.Token);

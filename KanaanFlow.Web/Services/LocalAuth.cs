@@ -114,6 +114,13 @@ public sealed class LocalAuth
         return null;
     }
 
+    /// <summary>Whether this is the logged-in device-only user's password (to confirm something drastic).</summary>
+    public bool IsMyPassword(string password)
+    {
+        LocalAccount? account = book.Settings.LocalAccounts.FirstOrDefault(a => a.MemberId == book.Settings.MemberId);
+        return account != null && account.Hash.Length > 0 && FixedEquals(Hash(password, account.Salt), account.Hash);
+    }
+
     /// <summary>Changes the logged-in device-only user's password. Returns false when the current one is wrong.</summary>
     public async Task<bool> ChangePasswordAsync(string current, string next)
     {

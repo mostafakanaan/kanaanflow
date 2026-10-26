@@ -132,6 +132,28 @@ public sealed class SyncService : IDisposable
         await SyncNowAsync();
     }
 
+    /// <summary>
+    /// Empties the team book for everyone (Admins only, confirmed with their password). Every other device drops its copy
+    /// at its next sync; with <paramref name="removeMembers"/> everyone else is also removed and signed out.
+    /// </summary>
+    public async Task ResetTeamBookAsync(string password, bool removeMembers)
+    {
+        string epoch = await api.ResetBookAsync(password, removeMembers);
+        await gate.WaitAsync();
+        try
+        {
+            await book.ClearBookAsync();
+            book.Settings.BookEpoch = epoch;
+            await book.SaveSettingsAsync();
+        }
+        finally
+        {
+            gate.Release();
+        }
+
+        await SyncNowAsync();
+    }
+
     public async Task SyncNowAsync()
     {
         if (!book.Settings.SignedIn || !online)
@@ -158,13 +180,30 @@ public sealed class SyncService : IDisposable
             await book.SaveSettingsAsync();
             State = SyncState.Synced;
         }
+        catch (ApiException ex) when (ex.Code == "book-reset")
+        {
+            // This device's changes were made on a copy from before an Admin reset the book: start again from the new one.
+            await DropOutdatedBookAsync("bookResetNotice");
+            rerun = true;
+            State = SyncState.Synced;
+        }
         catch (ApiException ex) when (ex.Status == 401)
         {
             // Signed out on the server (password reset, signed out by an Admin, or removed from the team): log in again.
             HoldingUploads = false;
             await book.LogOutAsync();
             State = SyncState.LocalOnly;
-            toasts.Show(book.T("signedOutNotice"));
+
+            // Removed together with a reset of the book: this device's copy is outdated, so it goes too.
+            string? epoch = await api.EpochAsync();
+            if (epoch != null && book.Settings.BookEpoch.Length > 0 && epoch != book.Settings.BookEpoch)
+            {
+                await DropOutdatedBookAsync("bookResetSignedOut");
+            }
+            else
+            {
+                toasts.Show(book.T("signedOutNotice"));
+            }
         }
         catch (Exception ex) when (ex is HttpRequestException || ex is JsonException || ex is TaskCanceledException || ex is ApiException || ex is InvalidOperationException)
         {
@@ -194,6 +233,13 @@ public sealed class SyncService : IDisposable
 
     private async Task StartSessionAsync(ApiSession session)
     {
+        // This device still holds the book from before an Admin reset it: that copy is outdated.
+        if (book.Settings.BookEpoch.Length > 0 && session.Epoch.Length > 0 && session.Epoch != book.Settings.BookEpoch)
+        {
+            await book.ClearBookAsync();
+        }
+
+        book.Settings.BookEpoch = session.Epoch;
         book.Settings.Token = session.Token;
         book.Settings.PulledSeq = 0;
         book.Settings.LocalAccounts.Clear();
@@ -257,7 +303,7 @@ public sealed class SyncService : IDisposable
         for (int start = 0; start < pending.Count; start += PageSize)
         {
             List<BookEvent> batch = pending.Skip(start).Take(PageSize).ToList();
-            PushResult result = await api.PushAsync(batch);
+            PushResult result = await api.PushAsync(batch, book.Settings.BookEpoch);
             await book.MarkSyncedAsync(result.Accepted);
 
             // The server refuses changes this member's role doesn't allow, and team changes made on the device
@@ -273,6 +319,21 @@ public sealed class SyncService : IDisposable
         }
     }
 
+    /// <summary>Removes this device's copy of a book that was reset, and keeps a notice on screen until it's read.</summary>
+    private async Task DropOutdatedBookAsync(string noticeKey)
+    {
+        int lost = book.MyUnsyncedEvents().Count;
+
+        // An open "Saved · Undo" message would undo a change that no longer exists.
+        toasts.Clear();
+        await book.ClearBookAsync();
+        HoldingUploads = false;
+        book.Settings.BookEpoch = string.Empty;
+        book.Settings.Notice = noticeKey;
+        await book.SaveSettingsAsync();
+        logger.LogInformation("The book was reset on the server; dropped this device's copy ({Lost} unsynced changes).", lost);
+    }
+
     private async Task PullAsync()
     {
         // An older build skips kinds of changes it doesn't know yet. After an update, read everything again once;
@@ -286,7 +347,16 @@ public sealed class SyncService : IDisposable
 
         while (true)
         {
-            List<(long Seq, BookEvent? Event)> rows = await api.PullAsync(book.Settings.PulledSeq, PageSize);
+            (string epoch, List<(long Seq, BookEvent? Event)> rows) = await api.PullAsync(book.Settings.PulledSeq, PageSize);
+            if (book.Settings.BookEpoch.Length > 0 && epoch.Length > 0 && epoch != book.Settings.BookEpoch)
+            {
+                // An Admin reset the book: drop this copy (offline changes included) and download the new book from the start.
+                await DropOutdatedBookAsync("bookResetNotice");
+                book.Settings.BookEpoch = epoch;
+                continue;
+            }
+
+            book.Settings.BookEpoch = epoch;
             await book.MergeRemoteAsync(rows.Where(r => r.Event != null).Select(r => r.Event!));
             if (rows.Count > 0)
             {
