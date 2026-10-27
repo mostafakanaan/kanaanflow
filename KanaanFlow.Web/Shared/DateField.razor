@@ -1,0 +1,197 @@
+@inherits KfComponent
+@using System.Globalization
+@inject IJSRuntime JS
+
+@* A date (or month) field with its own calendar, so month and day names follow the app's language
+   instead of the phone's. The calendar opens under the field; tapping its title switches to months. *@
+<div class="field">
+    <span id="@labelId">@Label</span>
+    <button type="button" class="date-btn" aria-labelledby="@labelId @valueId" aria-expanded="@(open ? "true" : "false")" @onclick="Toggle">
+        <Icon Name="calendar" Size="22" />
+        <span id="@valueId" class="date-btn-text @(Value == null ? "muted" : string.Empty)">@ValueText</span>
+        <Icon Name="chevron" Size="18" Class="@(open ? "chev-up" : "chev-down")" />
+    </button>
+    @if (open)
+    {
+        <div id="@calId" class="cal" role="group" aria-labelledby="@labelId">
+            <div class="cal-head">
+                <button type="button" class="cal-nav" aria-label="@T(showMonths ? "prevYear" : "prevMonth")" @onclick="() => Step(-1)"><Icon Name="chevron" Size="22" Class="chev-back" /></button>
+                @if (MonthOnly)
+                {
+                    <span class="cal-title">@shown.Year</span>
+                }
+                else
+                {
+                    <button type="button" class="cal-title" aria-expanded="@(showMonths ? "true" : "false")" @onclick="() => showMonths = !showMonths">@(showMonths ? shown.Year.ToString(CultureInfo.InvariantCulture) : MonthName(shown.Month) + " " + shown.Year.ToString(CultureInfo.InvariantCulture))</button>
+                }
+                <button type="button" class="cal-nav" aria-label="@T(showMonths ? "nextYear" : "nextMonth")" @onclick="() => Step(1)"><Icon Name="chevron" Size="22" Class="flip" /></button>
+            </div>
+
+            @if (showMonths)
+            {
+                <div class="cal-months">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        int month = m;
+                        bool picked = Value is DateOnly v && v.Year == shown.Year && v.Month == month;
+                        <button type="button" class="cal-month" aria-pressed="@(picked ? "true" : "false")" disabled="@(!MonthAllowed(month))" @onclick="() => PickMonthAsync(month)">@MonthName(month)</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="cal-grid">
+                    @foreach (int weekday in WeekOrder)
+                    {
+                        <span class="cal-wd" aria-hidden="true">@ShortDay(weekday)</span>
+                    }
+                    @for (int i = 0; i < Lead; i++)
+                    {
+                        <span></span>
+                    }
+                    @for (int d = 1; d <= DateTime.DaysInMonth(shown.Year, shown.Month); d++)
+                    {
+                        DateOnly day = new DateOnly(shown.Year, shown.Month, d);
+                        <button type="button" class="cal-day @(day == Today ? "is-today" : string.Empty)" aria-label="@Fmt.LongDate(day, Lang)" aria-pressed="@(Value == day ? "true" : "false")" disabled="@(!Allowed(day))" @onclick="() => PickAsync(day)">@d</button>
+                    }
+                </div>
+            }
+
+            <div class="cal-foot">
+                @if (Clearable)
+                {
+                    <button type="button" class="link-btn" @onclick="() => PickAsync(null)">@(ClearText ?? T("clear"))</button>
+                }
+                @if (MonthOnly)
+                {
+                    <button type="button" class="link-btn" disabled="@(!MonthAllowedIn(Today.Year, Today.Month))" @onclick="() => PickAsync(new DateOnly(Today.Year, Today.Month, 1))">@T("thisMonth")</button>
+                }
+                else
+                {
+                    <button type="button" class="link-btn" disabled="@(!Allowed(Today))" @onclick="() => PickAsync(Today)">@T("today")</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private static int counter;
+    private readonly string labelId = "df" + Interlocked.Increment(ref counter);
+    private string valueId => labelId + "v";
+    private string calId => labelId + "c";
+    private bool open;
+    private bool reveal;
+    private bool showMonths;
+    private DateOnly shown;
+
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public DateOnly? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<DateOnly?> ValueChanged { get; set; }
+
+    [Parameter]
+    public DateOnly? Min { get; set; }
+
+    [Parameter]
+    public DateOnly? Max { get; set; }
+
+    /// <summary>Pick a whole month; the value is its first day.</summary>
+    [Parameter]
+    public bool MonthOnly { get; set; }
+
+    /// <summary>Offers a button that empties the field.</summary>
+    [Parameter]
+    public bool Clearable { get; set; }
+
+    /// <summary>What the field shows, and its clear button says, when it is empty.</summary>
+    [Parameter]
+    public string? ClearText { get; set; }
+
+    private bool En => Lang == "en";
+
+    private string ValueText
+    {
+        get
+        {
+            if (Value is not DateOnly v)
+            {
+                return ClearText ?? string.Empty;
+            }
+
+            return MonthOnly ? MonthName(v.Month) + " " + v.Year.ToString(CultureInfo.InvariantCulture) : Fmt.LongDate(v, Lang);
+        }
+    }
+
+    // Arabic calendars start the week on Saturday, English ones here on Monday.
+    private IEnumerable<int> WeekOrder => Enumerable.Range(0, 7).Select(i => (i + FirstDay) % 7);
+
+    private int FirstDay => En ? (int)DayOfWeek.Monday : (int)DayOfWeek.Saturday;
+
+    private int Lead => ((int)new DateOnly(shown.Year, shown.Month, 1).DayOfWeek - FirstDay + 7) % 7;
+
+    private string MonthName(int month) => (En ? Strings.MonthsEnLong : Strings.MonthsAr)[month - 1];
+
+    private string ShortDay(int weekday) => (En ? Strings.DaysEnShort : Strings.DaysArShort)[weekday];
+
+    private bool Allowed(DateOnly day) => (Min == null || day >= Min) && (Max == null || day <= Max);
+
+    private bool MonthAllowed(int month) => MonthOnly ? MonthAllowedIn(shown.Year, month) : MonthOverlaps(shown.Year, month);
+
+    private bool MonthAllowedIn(int year, int month) => Allowed(new DateOnly(year, month, 1));
+
+    private bool MonthOverlaps(int year, int month)
+    {
+        DateOnly first = new DateOnly(year, month, 1);
+        DateOnly last = first.AddMonths(1).AddDays(-1);
+        return (Min == null || last >= Min) && (Max == null || first <= Max);
+    }
+
+    private void Toggle()
+    {
+        open = !open;
+        if (open)
+        {
+            DateOnly start = Value ?? (Max is DateOnly max && max < Today ? max : Today);
+            shown = new DateOnly(start.Year, start.Month, 1);
+            showMonths = MonthOnly;
+            reveal = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (reveal)
+        {
+            reveal = false;
+            await JS.InvokeVoidAsync("kf.reveal", calId);
+        }
+    }
+
+    private void Step(int direction)
+    {
+        shown = showMonths ? shown.AddYears(direction) : shown.AddMonths(direction);
+    }
+
+    private async Task PickMonthAsync(int month)
+    {
+        if (MonthOnly)
+        {
+            await PickAsync(new DateOnly(shown.Year, month, 1));
+            return;
+        }
+
+        shown = new DateOnly(shown.Year, month, 1);
+        showMonths = false;
+    }
+
+    private async Task PickAsync(DateOnly? day)
+    {
+        open = false;
+        await ValueChanged.InvokeAsync(day);
+    }
+}

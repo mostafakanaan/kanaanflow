@@ -49,9 +49,7 @@ else
                     <button type="button" class="sel cur-chip" aria-label="@Fmt.LongName(c, Lang)" aria-pressed="@(currency == c ? "true" : "false")" @onclick="() => currency = pick"><Flag Currency="c" Size="22" /><small>@Sym(c)</small></button>
                 }
             </div>
-            <label class="field">@T("salaryFrom")
-                <input class="input" type="month" @bind="fromDate" />
-            </label>
+            <DateField Label="@T("salaryFrom")" Value="fromDate" ValueChanged="d => fromDate = d ?? fromDate" MonthOnly="true" />
             @if (error.Length > 0)
             {
                 <p class="err-text" role="alert">@error</p>

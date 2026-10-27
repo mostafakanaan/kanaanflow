@@ -16,9 +16,9 @@
     </div>
     @if (period == "range")
     {
-        <div class="grid-2" style="gap:8px">
-            <label class="field" style="font-size:15px;gap:4px">@T("from")<input class="input" style="height:52px;font-size:16px;padding:0 8px" type="date" @bind="from" /></label>
-            <label class="field" style="font-size:15px;gap:4px">@T("to")<input class="input" style="height:52px;font-size:16px;padding:0 8px" type="date" @bind="to" /></label>
+        <div class="date-range">
+            <DateField Label="@T("from")" Value="from" ValueChanged="d => from = d ?? from" Max="Today" />
+            <DateField Label="@T("to")" Value="to" ValueChanged="d => to = d ?? to" Max="Today" />
         </div>
     }
 </section>
