@@ -6,9 +6,7 @@
     <label class="field">@T("amount") (@Fmt.LongName(Status.Currency, Lang))
         <input class="input ltr" style="font-size:24px;font-weight:700;text-align:center" inputmode="decimal" @bind="amountText" @bind:event="oninput" />
     </label>
-    <label class="field">@T("date")
-        <input class="input" type="date" @bind="date" max="@Fmt.Iso(Today)" />
-    </label>
+    <DateField Label="@T("date")" Value="date" ValueChanged="d => date = d ?? date" Max="Today" />
     <label class="field">@T("noteCol")
         <input class="input" type="text" @bind="note" placeholder="@T("optional")" />
     </label>

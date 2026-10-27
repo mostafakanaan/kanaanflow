@@ -28,6 +28,10 @@ public static class Strings
 
     public static readonly string[] DaysEn = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
+    public static readonly string[] DaysArShort = { "أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت" };
+
+    public static readonly string[] DaysEnShort = { "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" };
+
     public static readonly Dictionary<string, string> Ar = new Dictionary<string, string>
     {
         ["tagline"] = "حساباتك ببساطة",
@@ -396,6 +400,10 @@ public static class Strings
         ["salaryMonth"] = "الشهر",
         ["prevMonth"] = "الشهر السابق",
         ["nextMonth"] = "الشهر التالي",
+        ["prevYear"] = "السنة السابقة",
+        ["nextYear"] = "السنة التالية",
+        ["thisMonth"] = "هذا الشهر",
+        ["clear"] = "مسح",
         ["salaryMonthTotals"] = "رواتب هذا الشهر",
         ["salaryDue"] = "المستحق",
         ["salaryPaid"] = "مدفوع",
@@ -812,6 +820,10 @@ public static class Strings
         ["salaryMonth"] = "Month",
         ["prevMonth"] = "Previous month",
         ["nextMonth"] = "Next month",
+        ["prevYear"] = "Previous year",
+        ["nextYear"] = "Next year",
+        ["thisMonth"] = "This month",
+        ["clear"] = "Clear",
         ["salaryMonthTotals"] = "This month's salaries",
         ["salaryDue"] = "Due",
         ["salaryPaid"] = "Paid",

@@ -71,6 +71,7 @@ window.kf = (() => {
             document.documentElement.lang = lang;
             document.documentElement.dir = dir;
         },
+        reveal: id => { const el = document.getElementById(id); if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); },
         scrollTop: () => { const m = document.querySelector('.kf-main'); if (m) m.scrollTop = 0; window.scrollTo(0, 0); },
         // Inside the Android app, the native bridge prints (and saves PDFs) through Android's print service.
         print: () => setTimeout(() => window.KanaanFlowAndroid ? window.KanaanFlowAndroid.print() : window.print(), 50),

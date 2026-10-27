@@ -106,9 +106,7 @@
                 <label class="field">@T("note")
                     <input class="input" type="text" @bind="note" placeholder="@T("notePh")" />
                 </label>
-                <label class="field">@T("date")
-                    <input class="input" type="date" @bind="date" max="@Fmt.Iso(Today)" />
-                </label>
+                <DateField Label="@T("date")" Value="date" ValueChanged="d => date = d ?? date" Max="Today" />
             </div>
         }
 
