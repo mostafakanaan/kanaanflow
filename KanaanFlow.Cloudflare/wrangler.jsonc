@@ -8,8 +8,10 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
+    // No /index.html -> / redirect: the service worker caches index.html, and Safari won't show a cached redirect.
+    "html_handling": "none",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/service-worker-assets.js"]
   },
   "d1_databases": [
     {

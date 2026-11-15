@@ -790,9 +790,20 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
   return error("not-found", 404);
 }
 
+// Bump to make installed apps refresh their offline copy: browsers re-install the service worker when the files it
+// imports change, so this is appended to service-worker-assets.js.
+// r2: replaces offline copies of index.html saved from a redirect, which Safari refuses to show.
+const SERVICE_WORKER_REVISION = "r2";
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === "/service-worker-assets.js") {
+      const res = await env.ASSETS.fetch(request);
+      if (!res.ok) return res;
+      const body = (await res.text()) + `\n// revision ${SERVICE_WORKER_REVISION}\n`;
+      return new Response(body, { status: 200, headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" } });
+    }
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
       try {
         return await handleApi(request, env, url);
