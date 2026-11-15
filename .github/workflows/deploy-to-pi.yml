@@ -3,9 +3,8 @@ name: Build & Deploy (Self-hosted Pi)
 # Builds KanaanFlow on the Raspberry Pi: the PWA is served by nginx, the sync service and Postgres run in Docker,
 # and the Cloudflare Tunnel publishes both. One-time Pi setup: docs/hosting-pi.md
 
+# The app now runs on Cloudflare (deploy-cloudflare.yml). This stays available for running it on a Pi again by hand.
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 concurrency:

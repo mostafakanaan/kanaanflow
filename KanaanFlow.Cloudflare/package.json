@@ -1,0 +1,17 @@
+{
+  "name": "kanaanflow-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply kanaanflow --remote",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/api.test.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261114.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.92.0"
+  }
+}

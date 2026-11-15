@@ -5,7 +5,7 @@ for small businesses.
 
 It helps track income, expenses, loans, and receivables and generates
 daily financial reports (PDF and Excel).  
-The app syncs data to the team's own server (a Raspberry Pi) when a connection is available.
+The app syncs data to the team's sync service on Cloudflare (Workers + D1) when a connection is available.
 
 Built with .NET (Blazor WebAssembly PWA, ASP.NET Core and MAUI), PostgreSQL, EF Core and SQLite.
 
@@ -30,8 +30,8 @@ Arabic first (right-to-left), English one tap away.
   are paid, partly paid or unpaid, pay one month or all remaining salaries at once. Payments are ordinary paid entries
   under *Wages*, so they show in balances and reports.
 - **Settings** under *More*, grouped: Users, Categories, Entities, Balances, Language & app, and the Admin panel.
-- **Team sync**: devices share an append-only event log through the KanaanFlow sync service (ASP.NET Core +
-  PostgreSQL on the Pi), so entries are never overwritten. See [`docs/hosting-pi.md`](docs/hosting-pi.md).
+- **Team sync**: devices share an append-only event log through the KanaanFlow sync service (a Cloudflare Worker
+  with a D1 database), so entries are never overwritten. See [`docs/hosting-cloudflare.md`](docs/hosting-cloudflare.md).
 
 Run locally:
 
@@ -39,8 +39,9 @@ Run locally:
 dotnet run --project KanaanFlow.Web
 ```
 
-Deploy: self-hosted on a Raspberry Pi behind a Cloudflare Tunnel; every push to `main` builds and deploys it
-(see [`docs/hosting-pi.md`](docs/hosting-pi.md) for the one-time setup).
+Deploy: Cloudflare Workers + D1 at https://flow.kanaan-tricot.com; every push to `main` builds and deploys it
+(see [`docs/hosting-cloudflare.md`](docs/hosting-cloudflare.md)). The earlier Raspberry Pi setup is in
+[`docs/hosting-pi.md`](docs/hosting-pi.md).
 On a phone, open the site and choose *Install app* (Android/Windows) or *Share › Add to Home Screen* (iPhone).
 
 ⚠️ Source-available. Commercial use requires permission.
