@@ -1,0 +1,67 @@
+name: Deploy to Cloudflare
+
+# Builds the PWA and deploys it with the sync API (KanaanFlow.Cloudflare) to https://flow.kanaan-tricot.com.
+# Needs the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets (see docs/hosting-cloudflare.md); skips the deploy without them.
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test KanaanFlow.Tests/KanaanFlow.Tests.csproj -c Release
+
+      - name: Build the app
+        run: |
+          dotnet publish KanaanFlow.Web/KanaanFlow.Web.csproj -c Release -o out
+          rm -rf KanaanFlow.Cloudflare/public
+          cp -r out/wwwroot KanaanFlow.Cloudflare/public
+          # Cloudflare compresses on the fly; the pre-compressed copies aren't needed.
+          find KanaanFlow.Cloudflare/public -type f \( -name '*.br' -o -name '*.gz' \) -delete
+          cp KanaanFlow.Cloudflare/_headers KanaanFlow.Cloudflare/public/_headers
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test the sync API
+        working-directory: KanaanFlow.Cloudflare
+        run: |
+          npm ci
+          npx tsc --noEmit
+          printf 'KF_MASTER_PASSWORD=test-master-password\n' > .dev.vars
+          npx wrangler d1 migrations apply kanaanflow --local
+          npx wrangler dev --port 8787 --ip 127.0.0.1 > /tmp/dev.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:8787/api/health && break; sleep 1; done
+          node test/api.test.mjs
+          rm .dev.vars
+
+      - name: Deploy
+        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: KanaanFlow.Cloudflare
+        run: |
+          npx wrangler d1 migrations apply kanaanflow --remote
+          npx wrangler deploy
+
+      - name: No Cloudflare token
+        if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
+        run: echo "::notice::CLOUDFLARE_API_TOKEN isn't set, so nothing was deployed. See docs/hosting-cloudflare.md."

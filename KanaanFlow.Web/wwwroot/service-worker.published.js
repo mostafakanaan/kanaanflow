@@ -48,6 +48,15 @@ async function onFetch(event) {
         const request = shouldServeIndexHtml ? 'index.html' : event.request;
         const cache = await caches.open(cacheName);
         cachedResponse = await cache.match(request);
+        // Safari won't show a navigation answered with a response that came from a redirect
+        // ("Response served by service worker has redirections"), so hand back a clean copy of it.
+        if (cachedResponse && cachedResponse.redirected) {
+            cachedResponse = new Response(await cachedResponse.blob(), {
+                status: cachedResponse.status,
+                statusText: cachedResponse.statusText,
+                headers: cachedResponse.headers
+            });
+        }
     }
 
     return cachedResponse || fetch(event.request);
